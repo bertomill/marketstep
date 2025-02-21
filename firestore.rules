@@ -1,0 +1,45 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Helper functions
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+    
+    function isOwner(userId) {
+      return request.auth.uid == userId;
+    }
+
+    // Users collection
+    match /users/{userId} {
+      allow read: if isAuthenticated();
+      allow create: if isOwner(userId);
+      allow update: if isOwner(userId);
+      allow delete: if isOwner(userId);
+    }
+
+    // User preferences
+    match /userPreferences/{userId} {
+      allow read: if isOwner(userId);
+      allow write: if isOwner(userId);
+    }
+
+    // Industries (public read, admin write)
+    match /industries/{industryId} {
+      allow read: if isAuthenticated();
+      allow write: if false; // Only allow admin via Firebase Admin SDK
+    }
+
+    // Companies (public read, admin write)
+    match /companies/{companyId} {
+      allow read: if isAuthenticated();
+      allow write: if false; // Only allow admin via Firebase Admin SDK
+    }
+
+    // Feed items (public read, admin write)
+    match /feed/{feedId} {
+      allow read: if isAuthenticated();
+      allow write: if false; // Only allow admin via Firebase Admin SDK
+    }
+  }
+} 
