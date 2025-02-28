@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getOpenAIApi } from '@/lib/ai';
-import { auth } from '@/lib/firebase';
-import { db } from '@/lib/firebase';
+import { getOpenAIApi } from '@/src/lib/ai';
+import { db } from '@/src/lib/firebase';
 import { doc, getDoc } from 'firebase/firestore';
 
 export async function POST(request: NextRequest) {
@@ -68,8 +67,9 @@ export async function POST(request: NextRequest) {
     const summary = response.choices[0]?.message?.content || "Unable to generate summary";
 
     return NextResponse.json({ summary });
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Error generating summary:', error);
-    return NextResponse.json({ error: error.message || 'Failed to generate summary' }, { status: 500 });
+    const errorMessage = error instanceof Error ? error.message : 'Failed to generate summary';
+    return NextResponse.json({ error: errorMessage }, { status: 500 });
   }
 } 

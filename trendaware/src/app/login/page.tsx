@@ -2,8 +2,8 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { useAuth } from '@/contexts/AuthContext';
-import { Button } from '@/components/ui/button';
+import { useAuth } from '@/src/contexts/AuthContext';
+import { Button } from '@/src/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import Link from 'next/link';
@@ -71,7 +71,7 @@ export default function Login() {
         </CardContent>
         <CardFooter className="flex justify-center">
           <p className="text-sm text-gray-500">
-            Don't have an account? <Link href="/signup" className="text-blue-500 hover:underline">Sign up</Link>
+            Don&apos;t have an account? <Link href="/signup" className="text-blue-500 hover:underline">Sign up</Link>
           </p>
         </CardFooter>
       </Card>

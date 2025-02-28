@@ -2,9 +2,9 @@
 
 import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { useAuth } from '@/contexts/AuthContext';
-import { Button } from '@/components/ui/button';
-import ResearchForm from '@/components/ResearchForm';
+import { useAuth } from '@/src/contexts/AuthContext';
+import { Button } from '@/src/components/ui/button';
+import ResearchForm from '@/src/components/ResearchForm';
 
 export default function Dashboard() {
   const { currentUser, logout } = useAuth();

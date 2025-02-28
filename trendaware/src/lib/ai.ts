@@ -1,24 +1,40 @@
 'use client';
 
+import OpenAI from 'openai';
+
+let openaiInstance: OpenAI | null = null;
+
+export function getOpenAIApi(): OpenAI {
+  if (!openaiInstance) {
+    openaiInstance = new OpenAI({
+      apiKey: process.env.OPENAI_API_KEY,
+    });
+  }
+  return openaiInstance;
+}
+
 export async function generateResearchSummary(title: string, content: string): Promise<string> {
   try {
-    const response = await fetch('/api/generate-summary', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({ title, content }),
+    const openai = getOpenAIApi();
+    
+    const response = await openai.chat.completions.create({
+      model: "gpt-4o",
+      messages: [
+        {
+          role: "system",
+          content: "You are an AI research assistant for finance professionals. Generate a concise summary that includes key insights, relevant financial implications, and actionable recommendations."
+        },
+        {
+          role: "user",
+          content: `Research Title: ${title}\n\nContent: ${content}`
+        }
+      ],
+      temperature: 0.7,
     });
 
-    if (!response.ok) {
-      const errorData = await response.json();
-      throw new Error(errorData.error || 'Failed to generate summary');
-    }
-
-    const data = await response.json();
-    return data.summary;
+    return response.choices[0]?.message?.content || "Unable to generate summary";
   } catch (error) {
-    console.error('Error generating AI summary:', error);
+    console.error('Error generating research summary:', error);
     return "Error generating summary. Please try again later.";
   }
 }

@@ -9,7 +9,7 @@ import {
   onAuthStateChanged,
   UserCredential
 } from 'firebase/auth';
-import { auth } from '@/lib/firebase';
+import { auth } from '@/src/lib/firebase';
 
 interface AuthContextType {
   currentUser: User | null;
