@@ -1,10 +1,11 @@
 'use client'
 
 import Link from "next/link"
-import Image from "next/image"
 import { ArrowRight, CheckCircle } from "lucide-react"
 import { LoginSignupDialog } from "@/components/AuthComponents"
 import { Button } from "@/components/ui/button"
+import { cn } from "@/lib/utils"
+import { InteractiveGridPattern } from "@/components/magicui/interactive-grid-pattern"
 
 // This is the landing page that shows when users are not logged in
 // It has marketing content and login/signup options
@@ -57,13 +58,12 @@ export default function Landing() {
                   </Button>
                 </div>
               </div>
-              <div className="flex items-center justify-center">
-                <Image
-                  alt="Dashboard Preview"
-                  className="mx-auto aspect-video overflow-hidden rounded-xl object-cover object-center sm:w-full lg:order-last"
-                  src="/placeholder.svg"
-                  width={550}
-                  height={550}
+              <div className="relative h-[500px] flex items-center justify-center">
+                <InteractiveGridPattern
+                  className={cn(
+                    "[mask-image:radial-gradient(400px_circle_at_center,white,transparent)]",
+                    "inset-x-0 inset-y-[-30%] h-[200%] skew-y-12",
+                  )}
                 />
               </div>
             </div>
