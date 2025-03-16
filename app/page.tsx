@@ -4,19 +4,20 @@ import { useEffect, useState } from 'react'
 import { useAuth } from '@/lib/auth'
 import { db } from '@/lib/firebase'
 import { doc, getDoc } from 'firebase/firestore'
+import { useRouter } from 'next/navigation'
 import Landing from './Landing'
-import { Sidebar } from './components/Sidebar'
 import CompanySelection from './components/CompanySelection'
 import { Loader2 } from 'lucide-react'
 
 // This is the main page of the app
 // It shows the landing page for unauthenticated users
 // It shows the company selection screen for first-time users
-// And shows the actual app content for authenticated users who have completed onboarding
+// And redirects authenticated users who have completed onboarding to the my-companies page
 export default function Home() {
   const { user, loading } = useAuth()
   const [hasCompletedOnboarding, setHasCompletedOnboarding] = useState<boolean | null>(null)
   const [checkingOnboarding, setCheckingOnboarding] = useState(false)
+  const router = useRouter()
 
   // Check if the user has completed the onboarding process
   useEffect(() => {
@@ -29,6 +30,8 @@ export default function Home() {
         const userDoc = await getDoc(doc(db, 'users', user.uid))
         if (userDoc.exists() && userDoc.data().hasCompletedOnboarding) {
           setHasCompletedOnboarding(true)
+          // Redirect to my-companies page
+          router.push('/my-companies')
         } else {
           setHasCompletedOnboarding(false)
         }
@@ -44,11 +47,13 @@ export default function Home() {
     if (user) {
       checkOnboardingStatus()
     }
-  }, [user])
+  }, [user, router])
 
   // Function to handle completion of the onboarding process
   const handleOnboardingComplete = () => {
     setHasCompletedOnboarding(true)
+    // After completing onboarding, redirect to my-companies page
+    router.push('/my-companies')
   }
 
   // Show a loading spinner while checking authentication or onboarding status
@@ -70,18 +75,11 @@ export default function Home() {
     return <CompanySelection user={user} onComplete={handleOnboardingComplete} />;
   }
 
-  // If the user is logged in and has completed onboarding, show the app with the sidebar
+  // This is just a fallback in case the redirect doesn't happen immediately
+  // It will show a loading spinner while the redirect is happening
   return (
-    <div className="flex min-h-screen">
-      <Sidebar />
-      <main className="ml-64 min-h-screen">
-        <div className="flex-1 p-8 flex items-center justify-center">
-          <div className="text-center">
-            <h1 className="text-3xl font-bold mb-4">Welcome to MarketStep</h1>
-            <p className="text-lg text-gray-600">Your financial market companion</p>
-          </div>
-        </div>
-      </main>
+    <div className="flex min-h-screen items-center justify-center">
+      <Loader2 className="h-8 w-8 animate-spin text-primary" />
     </div>
   );
 }
