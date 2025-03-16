@@ -1,8 +1,9 @@
+'use client';
+
 // Import the functions you need from the SDKs you need
 import { initializeApp } from "firebase/app";
 import { getFirestore } from "firebase/firestore";
 import { getAuth } from "firebase/auth";
-import { getAnalytics } from "firebase/analytics";
 
 // Your web app's Firebase configuration
 // For Firebase JS SDK v7.20.0 and later, measurementId is optional
@@ -20,7 +21,16 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
 const auth = getAuth(app);
-// Analytics may not work in server components, so we need to check if window is defined
-const analytics = typeof window !== 'undefined' ? getAnalytics(app) : null;
+
+// Analytics is only available in the browser
+let analytics = null;
+if (typeof window !== 'undefined') {
+  // Dynamically import analytics to avoid SSR issues
+  import('firebase/analytics').then(({ getAnalytics }) => {
+    analytics = getAnalytics(app);
+  }).catch(error => {
+    console.error('Analytics failed to load', error);
+  });
+}
 
 export { app, db, auth, analytics }; 

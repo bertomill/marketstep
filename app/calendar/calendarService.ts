@@ -1,3 +1,5 @@
+'use client';
+
 import { db } from './firebaseConfig';
 import { 
   collection, 
