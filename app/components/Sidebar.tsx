@@ -7,7 +7,7 @@ import Link from "next/link"
 
 export function Sidebar() {
   return (
-    <div className="h-screen w-64 flex flex-col border-r bg-white">
+    <div className="fixed top-0 left-0 h-screen w-64 flex flex-col border-r bg-white z-40">
       <div className="p-4">
         <h2 className="text-lg font-semibold mb-4">MarketStep</h2>
         <Separator className="my-2" />
@@ -15,7 +15,7 @@ export function Sidebar() {
       <ScrollArea className="flex-1 px-4">
         <div className="space-y-2">
           <Button variant="ghost" className="w-full justify-start" asChild>
-            <Link href="/">
+            <Link href="/calendar">
               <CalendarIcon className="mr-2 h-4 w-4" />
               Calendar
             </Link>
