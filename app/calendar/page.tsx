@@ -5,7 +5,7 @@ import { useState, ReactNode, useEffect } from 'react'
 import { Event, getEvents, addEvent, updateEvent, deleteEvent } from './calendarService'
 import { useAuth } from '@/lib/auth'
 import { useRouter } from 'next/navigation'
-import { Loader2, DollarSign, Info, FileText, ArrowLeft } from 'lucide-react'
+import { Loader2, Info, FileText, ArrowLeft, Link as LinkIcon, ExternalLink } from 'lucide-react'
 import { getUserFollowedCompanies } from '@/lib/userService'
 import { 
   getFollowedCompaniesEarnings, 
@@ -40,11 +40,12 @@ export default function CalendarPage() {
   const [isShowingEarningsInDrawer, setIsShowingEarningsInDrawer] = useState(false)
   const [loading, setLoading] = useState(true)
   const [loadingEarnings, setLoadingEarnings] = useState(false)
-  const [newEvent, setNewEvent] = useState<Partial<Event & { summaryContent?: string }>>({
+  const [newEvent, setNewEvent] = useState<Partial<Event & { summaryContent?: string, eventUrl?: string }>>({
     title: '',
     start: new Date(),
     end: new Date(),
-    color: '#3b82f6' // Default blue color
+    color: '#3b82f6', // Default blue color
+    eventUrl: ''
   })
   const [transcriptData, setTranscriptData] = useState<EarningsTranscript | null>(null)
   const [loadingTranscript, setLoadingTranscript] = useState(false)
@@ -173,7 +174,8 @@ export default function CalendarPage() {
       title: '',
       start: startTime,
       end: endTime,
-      color: '#3b82f6'
+      color: '#3b82f6',
+      eventUrl: ''
     })
     
     setShowEventDrawer(true)
@@ -221,7 +223,7 @@ export default function CalendarPage() {
     }
     
     if (newEvent.start > newEvent.end) {
-      alert('End time must be after start time')
+      alert('End date must be after start date')
       return
     }
     
@@ -257,7 +259,8 @@ export default function CalendarPage() {
           title: finalTitle,
           start: newEvent.start,
           end: newEvent.end,
-          color: newEvent.color
+          color: newEvent.color,
+          eventUrl: newEvent.eventUrl
         }, user?.uid)
         
         if (savedEvent) {
@@ -405,29 +408,68 @@ export default function CalendarPage() {
 
   // Update the renderEvent function to handle earnings events and summary notes
   const renderEvent = (event: ExtendedEvent) => {
-    const isEarningsEvent = event.isEarningsEvent;
-    const isSummaryNote = event.color === '#10b981' && event.title.includes('Earnings Summary');
-    
-    return (
-      <div
-        key={event.id}
-        className={`px-2 py-1 rounded text-white text-sm mb-1 truncate cursor-pointer`}
-        style={{ backgroundColor: event.color }}
-        onClick={() => {
-          if (isEarningsEvent) {
-            toggleEarningsDetails(event.id);
-          } else if (isSummaryNote) {
-            editSummaryNote(event);
-          } else {
-            editEvent(event as Event);
-          }
-        }}
-      >
-        <div className="flex items-center">
-          {isEarningsEvent && <DollarSign className="h-3 w-3 mr-1" />}
-          {isSummaryNote && <FileText className="h-3 w-3 mr-1" />}
-          <span className="truncate">{event.title}</span>
+    // Special handling for earnings events
+    if (event.isEarningsEvent) {
+      return (
+        <div 
+          key={event.id}
+          onClick={(e) => {
+            e.stopPropagation()
+            setShowEarningsDetails(event.id)
+            setIsShowingEarningsInDrawer(true)
+            setShowEventDrawer(true)
+          }}
+          className={`p-1 text-xs rounded mb-1 cursor-pointer`}
+          style={{ backgroundColor: event.color }}
+        >
+          <div className="font-medium text-white">{event.title}</div>
         </div>
+      )
+    }
+    
+    // Special handling for summary notes
+    if (event.isSummaryNote) {
+      const parts = event.title.split('::SUMMARY::')
+      const title = parts[0]
+      
+      return (
+        <div 
+          key={event.id}
+          onClick={(e) => {
+            e.stopPropagation()
+            setNewEvent({
+              ...event,
+              title: title, // Strip the summary marker from display
+              summaryContent: parts[1] || ''
+            })
+            setShowEventDrawer(true)
+          }}
+          className="p-1 text-xs bg-green-500 text-white rounded mb-1 cursor-pointer"
+        >
+          <div className="font-medium">{title}</div>
+        </div>
+      )
+    }
+    
+    // Regular events
+    return (
+      <div 
+        key={event.id}
+        onClick={(e) => {
+          e.stopPropagation()
+          setNewEvent(event)
+          setShowEventDrawer(true)
+        }}
+        className="p-1 text-xs rounded mb-1 cursor-pointer"
+        style={{ backgroundColor: event.color }}
+      >
+        <div className="font-medium text-white truncate">{event.title}</div>
+        {event.eventUrl && (
+          <div className="flex items-center text-white text-opacity-80 mt-0.5">
+            <LinkIcon className="h-3 w-3 mr-1" />
+            <span className="truncate">Has link</span>
+          </div>
+        )}
       </div>
     )
   }
@@ -700,6 +742,59 @@ export default function CalendarPage() {
       setSavingNote(false);
     }
   };
+
+  // Extract content from URL
+  const extractContentFromUrl = async () => {
+    if (!newEvent.eventUrl) {
+      alert('Please enter a URL to extract content from')
+      return
+    }
+    
+    try {
+      setLoading(true)
+      // Call the API endpoint for content extraction
+      const response = await fetch('/api/extract-content', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ url: newEvent.eventUrl }),
+      })
+      
+      if (!response.ok) {
+        throw new Error(`Failed to extract content: ${response.status}`)
+      }
+      
+      const data = await response.json()
+      
+      // Update the event title with extracted information if available
+      if (data.title) {
+        setNewEvent({
+          ...newEvent,
+          title: data.title
+        })
+      }
+      
+      // Display YouTube transcript if available
+      if (data.isYouTube && data.transcriptText) {
+        setNewEvent({
+          ...newEvent,
+          title: data.title || newEvent.title,
+          color: '#10b981', // Green color for summary-type content
+          summaryContent: data.transcriptText
+        });
+        
+        // Show a success message
+        alert('YouTube transcript extracted successfully!');
+      }
+      
+    } catch (error) {
+      console.error('Error extracting content:', error)
+      alert('Failed to extract content. Please check the URL and try again.')
+    } finally {
+      setLoading(false)
+    }
+  }
 
   return (
     <div className="flex min-h-screen">
@@ -979,18 +1074,6 @@ export default function CalendarPage() {
                   </div>
                   
                   <div className="mb-4">
-                    <label className="block text-sm font-medium mb-1">Start Time</label>
-                    <input
-                      type="time"
-                      name="startTime"
-                      value={formatTimeForInput(newEvent.start as Date)}
-                      onChange={handleEventChange}
-                      className="w-full p-2 border rounded"
-                      disabled={loading}
-                    />
-                  </div>
-                  
-                  <div className="mb-4">
                     <label className="block text-sm font-medium mb-1">End Date</label>
                     <input
                       type="date"
@@ -1003,15 +1086,37 @@ export default function CalendarPage() {
                   </div>
                   
                   <div className="mb-4">
-                    <label className="block text-sm font-medium mb-1">End Time</label>
-                    <input
-                      type="time"
-                      name="endTime"
-                      value={formatTimeForInput(newEvent.end as Date)}
-                      onChange={handleEventChange}
-                      className="w-full p-2 border rounded"
-                      disabled={loading}
-                    />
+                    <label className="block text-sm font-medium mb-1">Event URL</label>
+                    <div className="flex space-x-2">
+                      <input
+                        type="url"
+                        name="eventUrl"
+                        value={newEvent.eventUrl || ''}
+                        onChange={(e) => setNewEvent({...newEvent, eventUrl: e.target.value})}
+                        className="flex-1 p-2 border rounded"
+                        placeholder="https://example.com/event"
+                        disabled={loading}
+                      />
+                      <button
+                        onClick={extractContentFromUrl}
+                        className="px-2 py-2 bg-blue-50 text-blue-600 rounded hover:bg-blue-100 transition-colors disabled:opacity-50"
+                        disabled={loading || !newEvent.eventUrl}
+                        title="Extract content from URL"
+                      >
+                        <ExternalLink className="h-5 w-5" />
+                      </button>
+                    </div>
+                    {newEvent.eventUrl && (
+                      <a 
+                        href={newEvent.eventUrl} 
+                        target="_blank" 
+                        rel="noopener noreferrer" 
+                        className="text-xs text-blue-600 flex items-center mt-1 hover:underline"
+                      >
+                        <ExternalLink className="h-3 w-3 mr-1" />
+                        Open link
+                      </a>
+                    )}
                   </div>
                   
                   <div className="mb-4">
