@@ -33,6 +33,7 @@ export default function CalendarPage() {
   const [events, setEvents] = useState<ExtendedEvent[]>([])
   const [showEventDrawer, setShowEventDrawer] = useState(false)
   const [showEarningsDetails, setShowEarningsDetails] = useState<string | null>(null)
+  const [isShowingEarningsInDrawer, setIsShowingEarningsInDrawer] = useState(false)
   const [loading, setLoading] = useState(true)
   const [loadingEarnings, setLoadingEarnings] = useState(false)
   const [newEvent, setNewEvent] = useState<Partial<Event>>({
@@ -282,84 +283,18 @@ export default function CalendarPage() {
     setShowEventDrawer(true)
   }
 
-  // Toggle earnings details modal
+  // Toggle earnings details in side drawer
   const toggleEarningsDetails = (eventId: string | null) => {
-    setShowEarningsDetails(eventId)
+    if (eventId) {
+      setShowEarningsDetails(eventId)
+      setIsShowingEarningsInDrawer(true)
+      setShowEventDrawer(true)
+    } else {
+      setShowEarningsDetails(null)
+      setIsShowingEarningsInDrawer(false)
+      setShowEventDrawer(false)
+    }
   }
-
-  // Render earnings details modal
-  const renderEarningsDetails = () => {
-    if (!showEarningsDetails) return null;
-    
-    const event = events.find(e => e.id === showEarningsDetails);
-    if (!event || !event.earningsData) return null;
-    
-    const earnings = event.earningsData;
-    
-    return (
-      <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-        <div className="bg-white rounded-lg p-6 max-w-md w-full">
-          <div className="flex justify-between items-center mb-4">
-            <h3 className="text-lg font-semibold">
-              {earnings.symbol} Earnings
-            </h3>
-            <button 
-              onClick={() => toggleEarningsDetails(null)}
-              className="text-gray-500 hover:text-gray-700"
-            >
-              ×
-            </button>
-          </div>
-          
-          <div className="space-y-3">
-            <div>
-              <p className="text-sm text-gray-500">Company</p>
-              <p className="font-medium">{earnings.companyName || earnings.symbol}</p>
-            </div>
-            
-            <div>
-              <p className="text-sm text-gray-500">Date</p>
-              <p className="font-medium">{earnings.date} ({formatEarningsHour(earnings.hour)})</p>
-            </div>
-            
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <p className="text-sm text-gray-500">EPS Estimate</p>
-                <p className="font-medium">{earnings.epsEstimate !== null ? `$${earnings.epsEstimate.toFixed(2)}` : 'N/A'}</p>
-              </div>
-              
-              <div>
-                <p className="text-sm text-gray-500">EPS Actual</p>
-                <p className="font-medium">{earnings.epsActual !== null ? `$${earnings.epsActual.toFixed(2)}` : 'N/A'}</p>
-              </div>
-              
-              <div>
-                <p className="text-sm text-gray-500">Revenue Estimate</p>
-                <p className="font-medium">{formatRevenue(earnings.revenueEstimate)}</p>
-              </div>
-              
-              <div>
-                <p className="text-sm text-gray-500">Revenue Actual</p>
-                <p className="font-medium">{formatRevenue(earnings.revenueActual)}</p>
-              </div>
-            </div>
-            
-            <div>
-              <p className="text-sm text-gray-500">Quarter</p>
-              <p className="font-medium">Q{earnings.quarter} {earnings.year}</p>
-            </div>
-          </div>
-          
-          <button
-            onClick={() => toggleEarningsDetails(null)}
-            className="mt-6 w-full py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
-          >
-            Close
-          </button>
-        </div>
-      </div>
-    );
-  };
 
   // Helper function to check if a date has events
   const getEventsForDate = (date: Date) => {
@@ -683,10 +618,14 @@ export default function CalendarPage() {
           <div className="p-6 h-full flex flex-col">
             <div className="flex justify-between items-center mb-6">
               <h3 className="text-lg font-semibold">
-                {newEvent.id ? 'Edit Event' : 'Add Event'}
+                {isShowingEarningsInDrawer ? 'Earnings Details' : newEvent.id ? 'Edit Event' : 'Add Event'}
               </h3>
               <button 
-                onClick={() => setShowEventDrawer(false)}
+                onClick={() => {
+                  setShowEventDrawer(false)
+                  setIsShowingEarningsInDrawer(false)
+                  setShowEarningsDetails(null)
+                }}
                 className="text-gray-500 hover:text-gray-700"
               >
                 <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -696,119 +635,185 @@ export default function CalendarPage() {
             </div>
             
             <div className="flex-1 overflow-y-auto">
-              <div className="mb-4">
-                <label className="block text-sm font-medium mb-1">Title</label>
-                <input
-                  type="text"
-                  name="title"
-                  value={newEvent.title}
-                  onChange={handleEventChange}
-                  className="w-full p-2 border rounded"
-                  placeholder="Event title"
-                  disabled={loading}
-                />
-              </div>
-              
-              <div className="mb-4">
-                <label className="block text-sm font-medium mb-1">Start Date</label>
-                <input
-                  type="date"
-                  name="startDate"
-                  value={formatDateForInput(newEvent.start as Date)}
-                  onChange={handleEventChange}
-                  className="w-full p-2 border rounded"
-                  disabled={loading}
-                />
-              </div>
-              
-              <div className="mb-4">
-                <label className="block text-sm font-medium mb-1">Start Time</label>
-                <input
-                  type="time"
-                  name="startTime"
-                  value={formatTimeForInput(newEvent.start as Date)}
-                  onChange={handleEventChange}
-                  className="w-full p-2 border rounded"
-                  disabled={loading}
-                />
-              </div>
-              
-              <div className="mb-4">
-                <label className="block text-sm font-medium mb-1">End Date</label>
-                <input
-                  type="date"
-                  name="endDate"
-                  value={formatDateForInput(newEvent.end as Date)}
-                  onChange={handleEventChange}
-                  className="w-full p-2 border rounded"
-                  disabled={loading}
-                />
-              </div>
-              
-              <div className="mb-4">
-                <label className="block text-sm font-medium mb-1">End Time</label>
-                <input
-                  type="time"
-                  name="endTime"
-                  value={formatTimeForInput(newEvent.end as Date)}
-                  onChange={handleEventChange}
-                  className="w-full p-2 border rounded"
-                  disabled={loading}
-                />
-              </div>
-              
-              <div className="mb-4">
-                <label className="block text-sm font-medium mb-1">Color</label>
-                <select
-                  name="color"
-                  value={newEvent.color}
-                  onChange={handleEventChange}
-                  className="w-full p-2 border rounded"
-                  disabled={loading}
-                >
-                  <option value="#3b82f6">Blue</option>
-                  <option value="#ef4444">Red</option>
-                  <option value="#10b981">Green</option>
-                  <option value="#f59e0b">Yellow</option>
-                  <option value="#8b5cf6">Purple</option>
-                </select>
-              </div>
+              {isShowingEarningsInDrawer ? (
+                // Earnings event details view
+                (() => {
+                  const event = events.find(e => e.id === showEarningsDetails);
+                  if (!event || !event.earningsData) return <div>No earnings data found</div>;
+                  
+                  const earnings = event.earningsData;
+                  
+                  return (
+                    <div className="space-y-4">
+                      <div>
+                        <p className="text-sm text-gray-500">Company</p>
+                        <p className="font-medium">{earnings.companyName || earnings.symbol}</p>
+                      </div>
+                      
+                      <div>
+                        <p className="text-sm text-gray-500">Date</p>
+                        <p className="font-medium">{earnings.date} ({formatEarningsHour(earnings.hour)})</p>
+                      </div>
+                      
+                      <div className="grid grid-cols-2 gap-4">
+                        <div>
+                          <p className="text-sm text-gray-500">EPS Estimate</p>
+                          <p className="font-medium">{earnings.epsEstimate !== null ? `$${earnings.epsEstimate.toFixed(2)}` : 'N/A'}</p>
+                        </div>
+                        
+                        <div>
+                          <p className="text-sm text-gray-500">EPS Actual</p>
+                          <p className="font-medium">{earnings.epsActual !== null ? `$${earnings.epsActual.toFixed(2)}` : 'N/A'}</p>
+                        </div>
+                        
+                        <div>
+                          <p className="text-sm text-gray-500">Revenue Estimate</p>
+                          <p className="font-medium">{formatRevenue(earnings.revenueEstimate)}</p>
+                        </div>
+                        
+                        <div>
+                          <p className="text-sm text-gray-500">Revenue Actual</p>
+                          <p className="font-medium">{formatRevenue(earnings.revenueActual)}</p>
+                        </div>
+                      </div>
+                      
+                      <div>
+                        <p className="text-sm text-gray-500">Quarter</p>
+                        <p className="font-medium">Q{earnings.quarter} {earnings.year}</p>
+                      </div>
+                    </div>
+                  );
+                })()
+              ) : (
+                // Regular event edit view
+                <>
+                  <div className="mb-4">
+                    <label className="block text-sm font-medium mb-1">Title</label>
+                    <input
+                      type="text"
+                      name="title"
+                      value={newEvent.title}
+                      onChange={handleEventChange}
+                      className="w-full p-2 border rounded"
+                      placeholder="Event title"
+                      disabled={loading}
+                    />
+                  </div>
+                  
+                  <div className="mb-4">
+                    <label className="block text-sm font-medium mb-1">Start Date</label>
+                    <input
+                      type="date"
+                      name="startDate"
+                      value={formatDateForInput(newEvent.start as Date)}
+                      onChange={handleEventChange}
+                      className="w-full p-2 border rounded"
+                      disabled={loading}
+                    />
+                  </div>
+                  
+                  <div className="mb-4">
+                    <label className="block text-sm font-medium mb-1">Start Time</label>
+                    <input
+                      type="time"
+                      name="startTime"
+                      value={formatTimeForInput(newEvent.start as Date)}
+                      onChange={handleEventChange}
+                      className="w-full p-2 border rounded"
+                      disabled={loading}
+                    />
+                  </div>
+                  
+                  <div className="mb-4">
+                    <label className="block text-sm font-medium mb-1">End Date</label>
+                    <input
+                      type="date"
+                      name="endDate"
+                      value={formatDateForInput(newEvent.end as Date)}
+                      onChange={handleEventChange}
+                      className="w-full p-2 border rounded"
+                      disabled={loading}
+                    />
+                  </div>
+                  
+                  <div className="mb-4">
+                    <label className="block text-sm font-medium mb-1">End Time</label>
+                    <input
+                      type="time"
+                      name="endTime"
+                      value={formatTimeForInput(newEvent.end as Date)}
+                      onChange={handleEventChange}
+                      className="w-full p-2 border rounded"
+                      disabled={loading}
+                    />
+                  </div>
+                  
+                  <div className="mb-4">
+                    <label className="block text-sm font-medium mb-1">Color</label>
+                    <select
+                      name="color"
+                      value={newEvent.color}
+                      onChange={handleEventChange}
+                      className="w-full p-2 border rounded"
+                      disabled={loading}
+                    >
+                      <option value="#3b82f6">Blue</option>
+                      <option value="#ef4444">Red</option>
+                      <option value="#10b981">Green</option>
+                      <option value="#f59e0b">Yellow</option>
+                      <option value="#8b5cf6">Purple</option>
+                    </select>
+                  </div>
+                </>
+              )}
             </div>
             
             <div className="pt-4 border-t mt-4">
               <div className="flex justify-between">
-                {newEvent.id && (
+                {isShowingEarningsInDrawer ? (
                   <button
-                    onClick={() => handleDeleteEvent(newEvent.id as string)}
-                    className="px-4 py-2 bg-red-500 text-white rounded hover:bg-red-600 disabled:opacity-50"
-                    disabled={loading}
+                    onClick={() => {
+                      setShowEventDrawer(false)
+                      setIsShowingEarningsInDrawer(false)
+                      setShowEarningsDetails(null)
+                    }}
+                    className="w-full py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
                   >
-                    Delete
+                    Close
                   </button>
+                ) : (
+                  <>
+                    {newEvent.id && (
+                      <button
+                        onClick={() => handleDeleteEvent(newEvent.id as string)}
+                        className="px-4 py-2 bg-red-500 text-white rounded hover:bg-red-600 disabled:opacity-50"
+                        disabled={loading}
+                      >
+                        Delete
+                      </button>
+                    )}
+                    <div className="flex gap-2 ml-auto">
+                      <button
+                        onClick={() => setShowEventDrawer(false)}
+                        className="px-4 py-2 bg-gray-200 rounded hover:bg-gray-300 disabled:opacity-50"
+                        disabled={loading}
+                      >
+                        Cancel
+                      </button>
+                      <button
+                        onClick={saveEvent}
+                        className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 disabled:opacity-50"
+                        disabled={loading}
+                      >
+                        {loading ? 'Saving...' : 'Save'}
+                      </button>
+                    </div>
+                  </>
                 )}
-                <div className="flex gap-2 ml-auto">
-                  <button
-                    onClick={() => setShowEventDrawer(false)}
-                    className="px-4 py-2 bg-gray-200 rounded hover:bg-gray-300 disabled:opacity-50"
-                    disabled={loading}
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    onClick={saveEvent}
-                    className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 disabled:opacity-50"
-                    disabled={loading}
-                  >
-                    {loading ? 'Saving...' : 'Save'}
-                  </button>
-                </div>
               </div>
             </div>
           </div>
         </div>
-        
-        {/* Earnings details modal */}
-        {renderEarningsDetails()}
       </main>
     </div>
   )
