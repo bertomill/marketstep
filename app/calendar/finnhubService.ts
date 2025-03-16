@@ -144,4 +144,49 @@ export const convertEarningsToCalendarEvents = (
       earningsData: event
     };
   });
+};
+
+export interface EarningsTranscript {
+  date: string;
+  transcript: string;
+  transcript_split: {
+    speaker: string;
+    text: string;
+  }[];
+}
+
+// Function to fetch earnings call transcript from API Ninjas
+export const fetchEarningsTranscript = async (
+  ticker: string,
+  year: number,
+  quarter: number
+): Promise<EarningsTranscript | null> => {
+  try {
+    // Your API Ninjas key should be stored in environment variables
+    const apiKey = process.env.NEXT_PUBLIC_API_NINJAS_KEY;
+    
+    if (!apiKey) {
+      console.error('API Ninjas key is missing. Please add it to your environment variables.');
+      return null;
+    }
+    
+    const url = `https://api.api-ninjas.com/v1/earningstranscript?ticker=${ticker}&year=${year}&quarter=${quarter}`;
+    
+    const response = await fetch(url, {
+      headers: {
+        'X-Api-Key': apiKey,
+      },
+    });
+    
+    if (!response.ok) {
+      console.error('Failed to fetch transcript:', response.status, await response.text());
+      return null;
+    }
+    
+    const data = await response.json();
+    return data as EarningsTranscript;
+  } catch (error) {
+    console.error('Error fetching earnings transcript:', error);
+    return null;
+  }
 }; 

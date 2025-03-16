@@ -5,14 +5,16 @@ import { useState, ReactNode, useEffect } from 'react'
 import { Event, getEvents, addEvent, updateEvent, deleteEvent } from './calendarService'
 import { useAuth } from '@/lib/auth'
 import { useRouter } from 'next/navigation'
-import { Loader2, DollarSign, Info } from 'lucide-react'
+import { Loader2, DollarSign, Info, FileText, ArrowLeft } from 'lucide-react'
 import { getUserFollowedCompanies } from '@/lib/userService'
 import { 
   getFollowedCompaniesEarnings, 
   convertEarningsToCalendarEvents,
   formatEarningsHour,
   formatRevenue,
-  EarningsEvent
+  EarningsEvent,
+  fetchEarningsTranscript,
+  EarningsTranscript
 } from './finnhubService'
 import { format, addMonths, subMonths, startOfMonth, endOfMonth, formatISO } from 'date-fns'
 
@@ -42,6 +44,9 @@ export default function CalendarPage() {
     end: new Date(),
     color: '#3b82f6' // Default blue color
   })
+  const [transcriptData, setTranscriptData] = useState<EarningsTranscript | null>(null)
+  const [loadingTranscript, setLoadingTranscript] = useState(false)
+  const [showingTranscript, setShowingTranscript] = useState(false)
 
   // Redirect if not authenticated
   useEffect(() => {
@@ -289,11 +294,34 @@ export default function CalendarPage() {
       setShowEarningsDetails(eventId)
       setIsShowingEarningsInDrawer(true)
       setShowEventDrawer(true)
+      setShowingTranscript(false) // Reset transcript view when showing earnings details
+      setTranscriptData(null) // Clear any previous transcript data
     } else {
       setShowEarningsDetails(null)
       setIsShowingEarningsInDrawer(false)
       setShowEventDrawer(false)
+      setShowingTranscript(false)
     }
+  }
+
+  // Function to fetch and display the transcript
+  const viewEarningsTranscript = async (ticker: string, year: number, quarter: number) => {
+    setLoadingTranscript(true)
+    try {
+      const transcript = await fetchEarningsTranscript(ticker, year, quarter)
+      setTranscriptData(transcript)
+      setShowingTranscript(true)
+    } catch (error) {
+      console.error('Error fetching transcript:', error)
+      alert('Failed to load transcript. Please try again.')
+    } finally {
+      setLoadingTranscript(false)
+    }
+  }
+  
+  // Function to go back from transcript view to earnings details
+  const backToEarningsDetails = () => {
+    setShowingTranscript(false)
   }
 
   // Helper function to check if a date has events
@@ -618,13 +646,16 @@ export default function CalendarPage() {
           <div className="p-6 h-full flex flex-col">
             <div className="flex justify-between items-center mb-6">
               <h3 className="text-lg font-semibold">
-                {isShowingEarningsInDrawer ? 'Earnings Details' : newEvent.id ? 'Edit Event' : 'Add Event'}
+                {showingTranscript ? 'Earnings Transcript' : 
+                 isShowingEarningsInDrawer ? 'Earnings Details' : 
+                 newEvent.id ? 'Edit Event' : 'Add Event'}
               </h3>
               <button 
                 onClick={() => {
                   setShowEventDrawer(false)
                   setIsShowingEarningsInDrawer(false)
                   setShowEarningsDetails(null)
+                  setShowingTranscript(false)
                 }}
                 className="text-gray-500 hover:text-gray-700"
               >
@@ -635,7 +666,49 @@ export default function CalendarPage() {
             </div>
             
             <div className="flex-1 overflow-y-auto">
-              {isShowingEarningsInDrawer ? (
+              {showingTranscript ? (
+                // Transcript view
+                <div className="space-y-4">
+                  {loadingTranscript ? (
+                    <div className="flex justify-center items-center h-64">
+                      <Loader2 className="h-8 w-8 animate-spin text-primary" />
+                    </div>
+                  ) : transcriptData ? (
+                    <div>
+                      <button 
+                        onClick={backToEarningsDetails}
+                        className="flex items-center text-blue-600 mb-4"
+                      >
+                        <ArrowLeft className="h-4 w-4 mr-1" /> Back to details
+                      </button>
+                      
+                      <div className="mb-4">
+                        <p className="text-sm text-gray-500">Earnings Call Date</p>
+                        <p className="font-medium">{transcriptData.date}</p>
+                      </div>
+                      
+                      <div className="space-y-6">
+                        {transcriptData.transcript_split.slice(0, 10).map((section, index) => (
+                          <div key={index} className="pb-4 border-b border-gray-100">
+                            <p className="font-semibold mb-1">{section.speaker}</p>
+                            <p className="text-sm text-gray-700">{section.text}</p>
+                          </div>
+                        ))}
+                        
+                        {transcriptData.transcript_split.length > 10 && (
+                          <p className="text-center text-gray-500 text-sm">
+                            {transcriptData.transcript_split.length - 10} more sections (scroll to see full transcript)
+                          </p>
+                        )}
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="text-center text-gray-500">
+                      Transcript not available
+                    </div>
+                  )}
+                </div>
+              ) : isShowingEarningsInDrawer ? (
                 // Earnings event details view
                 (() => {
                   const event = events.find(e => e.id === showEarningsDetails);
@@ -681,6 +754,14 @@ export default function CalendarPage() {
                         <p className="text-sm text-gray-500">Quarter</p>
                         <p className="font-medium">Q{earnings.quarter} {earnings.year}</p>
                       </div>
+                      
+                      <button
+                        onClick={() => viewEarningsTranscript(earnings.symbol, earnings.year, earnings.quarter)}
+                        className="w-full mt-4 flex items-center justify-center py-2 px-4 bg-blue-50 text-blue-600 rounded hover:bg-blue-100 transition-colors"
+                      >
+                        <FileText className="h-4 w-4 mr-2" />
+                        View Earnings Call Transcript
+                      </button>
                     </div>
                   );
                 })()
@@ -770,12 +851,13 @@ export default function CalendarPage() {
             
             <div className="pt-4 border-t mt-4">
               <div className="flex justify-between">
-                {isShowingEarningsInDrawer ? (
+                {isShowingEarningsInDrawer || showingTranscript ? (
                   <button
                     onClick={() => {
                       setShowEventDrawer(false)
                       setIsShowingEarningsInDrawer(false)
                       setShowEarningsDetails(null)
+                      setShowingTranscript(false)
                     }}
                     className="w-full py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
                   >
