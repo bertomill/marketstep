@@ -6,7 +6,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import { Dialog, DialogContent, DialogTrigger } from '@/components/ui/dialog'
+import { Dialog, DialogContent, DialogTrigger, DialogTitle } from '@/components/ui/dialog'
 import { useAuth } from '@/lib/auth'
 import { X } from 'lucide-react'
 
@@ -71,6 +71,7 @@ export function LoginSignupDialog({ buttonText = "Login / Sign Up" }: { buttonTe
         <Button>{buttonText}</Button>
       </DialogTrigger>
       <DialogContent className="sm:max-w-[425px]">
+        <DialogTitle className="sr-only">Authentication</DialogTitle>
         <div className="absolute right-4 top-4">
           <Button 
             variant="ghost" 

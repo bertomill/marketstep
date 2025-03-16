@@ -5,7 +5,22 @@ import { useState, ReactNode, useEffect } from 'react'
 import { Event, getEvents, addEvent, updateEvent, deleteEvent } from './calendarService'
 import { useAuth } from '@/lib/auth'
 import { useRouter } from 'next/navigation'
-import { Loader2 } from 'lucide-react'
+import { Loader2, DollarSign, Info } from 'lucide-react'
+import { getUserFollowedCompanies } from '@/lib/userService'
+import { 
+  getFollowedCompaniesEarnings, 
+  convertEarningsToCalendarEvents,
+  formatEarningsHour,
+  formatRevenue,
+  EarningsEvent
+} from './finnhubService'
+import { format, addMonths, subMonths, startOfMonth, endOfMonth, formatISO } from 'date-fns'
+
+// Extended Event type to include earnings data
+type ExtendedEvent = Event & {
+  isEarningsEvent?: boolean;
+  earningsData?: EarningsEvent;
+};
 
 export default function CalendarPage() {
   // Authentication check
@@ -15,9 +30,11 @@ export default function CalendarPage() {
   // State for current date and view type
   const [date, setDate] = useState(new Date())
   const [viewType, setViewType] = useState('month') // 'day', 'week', or 'month'
-  const [events, setEvents] = useState<Event[]>([])
+  const [events, setEvents] = useState<ExtendedEvent[]>([])
   const [showEventDrawer, setShowEventDrawer] = useState(false)
+  const [showEarningsDetails, setShowEarningsDetails] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
+  const [loadingEarnings, setLoadingEarnings] = useState(false)
   const [newEvent, setNewEvent] = useState<Partial<Event>>({
     title: '',
     start: new Date(),
@@ -50,6 +67,56 @@ export default function CalendarPage() {
 
     fetchEvents()
   }, [user])
+
+  // Fetch earnings events when the date changes
+  useEffect(() => {
+    if (!user) return;
+
+    const fetchEarningsEvents = async () => {
+      setLoadingEarnings(true)
+      try {
+        // Get the user's followed companies
+        const followedCompanies = await getUserFollowedCompanies(user.uid)
+        
+        if (followedCompanies.length === 0) {
+          setLoadingEarnings(false)
+          return;
+        }
+        
+        // Calculate date range (current month +/- 1 month)
+        const start = startOfMonth(subMonths(date, 1))
+        const end = endOfMonth(addMonths(date, 1))
+        
+        // Format dates for API
+        const fromDate = formatISO(start, { representation: 'date' })
+        const toDate = formatISO(end, { representation: 'date' })
+        
+        // Fetch earnings events
+        const earningsEvents = await getFollowedCompaniesEarnings(
+          followedCompanies,
+          fromDate,
+          toDate
+        )
+        
+        // Convert to calendar events
+        const earningsCalendarEvents = convertEarningsToCalendarEvents(earningsEvents)
+        
+        // Merge with user events, replacing any existing earnings events
+        setEvents(prevEvents => {
+          // Filter out old earnings events
+          const userEvents = prevEvents.filter(event => !event.isEarningsEvent)
+          // Add new earnings events
+          return [...userEvents, ...earningsCalendarEvents]
+        })
+      } catch (error) {
+        console.error('Error fetching earnings events:', error)
+      } finally {
+        setLoadingEarnings(false)
+      }
+    }
+    
+    fetchEarningsEvents()
+  }, [user, date])
 
   // Show loading state while checking authentication
   if (authLoading) {
@@ -215,13 +282,92 @@ export default function CalendarPage() {
     setShowEventDrawer(true)
   }
 
+  // Toggle earnings details modal
+  const toggleEarningsDetails = (eventId: string | null) => {
+    setShowEarningsDetails(eventId)
+  }
+
+  // Render earnings details modal
+  const renderEarningsDetails = () => {
+    if (!showEarningsDetails) return null;
+    
+    const event = events.find(e => e.id === showEarningsDetails);
+    if (!event || !event.earningsData) return null;
+    
+    const earnings = event.earningsData;
+    
+    return (
+      <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+        <div className="bg-white rounded-lg p-6 max-w-md w-full">
+          <div className="flex justify-between items-center mb-4">
+            <h3 className="text-lg font-semibold">
+              {earnings.symbol} Earnings
+            </h3>
+            <button 
+              onClick={() => toggleEarningsDetails(null)}
+              className="text-gray-500 hover:text-gray-700"
+            >
+              ×
+            </button>
+          </div>
+          
+          <div className="space-y-3">
+            <div>
+              <p className="text-sm text-gray-500">Company</p>
+              <p className="font-medium">{earnings.companyName || earnings.symbol}</p>
+            </div>
+            
+            <div>
+              <p className="text-sm text-gray-500">Date</p>
+              <p className="font-medium">{earnings.date} ({formatEarningsHour(earnings.hour)})</p>
+            </div>
+            
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <p className="text-sm text-gray-500">EPS Estimate</p>
+                <p className="font-medium">{earnings.epsEstimate !== null ? `$${earnings.epsEstimate.toFixed(2)}` : 'N/A'}</p>
+              </div>
+              
+              <div>
+                <p className="text-sm text-gray-500">EPS Actual</p>
+                <p className="font-medium">{earnings.epsActual !== null ? `$${earnings.epsActual.toFixed(2)}` : 'N/A'}</p>
+              </div>
+              
+              <div>
+                <p className="text-sm text-gray-500">Revenue Estimate</p>
+                <p className="font-medium">{formatRevenue(earnings.revenueEstimate)}</p>
+              </div>
+              
+              <div>
+                <p className="text-sm text-gray-500">Revenue Actual</p>
+                <p className="font-medium">{formatRevenue(earnings.revenueActual)}</p>
+              </div>
+            </div>
+            
+            <div>
+              <p className="text-sm text-gray-500">Quarter</p>
+              <p className="font-medium">Q{earnings.quarter} {earnings.year}</p>
+            </div>
+          </div>
+          
+          <button
+            onClick={() => toggleEarningsDetails(null)}
+            className="mt-6 w-full py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
+          >
+            Close
+          </button>
+        </div>
+      </div>
+    );
+  };
+
   // Helper function to check if a date has events
   const getEventsForDate = (date: Date) => {
     const dateString = date.toDateString()
-    return events.filter(event => 
-      new Date(event.start).toDateString() === dateString ||
-      new Date(event.end).toDateString() === dateString
-    )
+    return events.filter(event => {
+      const eventDate = new Date(event.start)
+      return eventDate.toDateString() === dateString
+    })
   }
 
   // Get days in current month
@@ -247,6 +393,25 @@ export default function CalendarPage() {
     const hours = String(date.getHours()).padStart(2, '0')
     const minutes = String(date.getMinutes()).padStart(2, '0')
     return `${hours}:${minutes}`
+  }
+
+  // Update the renderEvent function to handle earnings events
+  const renderEvent = (event: ExtendedEvent) => {
+    const isEarningsEvent = event.isEarningsEvent;
+    
+    return (
+      <div
+        key={event.id}
+        className={`px-2 py-1 rounded text-white text-sm mb-1 truncate cursor-pointer`}
+        style={{ backgroundColor: event.color }}
+        onClick={() => isEarningsEvent ? toggleEarningsDetails(event.id) : editEvent(event as Event)}
+      >
+        <div className="flex items-center">
+          {isEarningsEvent && <DollarSign className="h-3 w-3 mr-1" />}
+          <span className="truncate">{event.title}</span>
+        </div>
+      </div>
+    )
   }
 
   // Month View Rendering
@@ -282,19 +447,9 @@ export default function CalendarPage() {
             )}
           </div>
           <div className="overflow-y-auto max-h-24">
-            {dayEvents.slice(0, 3).map(event => (
-              <div 
-                key={event.id}
-                className="text-xs p-1 mb-1 rounded truncate cursor-pointer"
-                style={{ backgroundColor: event.color + '33' }} // Add transparency
-                onClick={(e) => {
-                  e.stopPropagation()
-                  editEvent(event)
-                }}
-              >
-                {event.title}
-              </div>
-            ))}
+            {dayEvents.slice(0, 3).map(event => 
+              renderEvent(event as ExtendedEvent)
+            )}
             {dayEvents.length > 3 && (
               <div className="text-xs text-gray-500">
                 +{dayEvents.length - 3} more
@@ -345,20 +500,9 @@ export default function CalendarPage() {
             <div className="text-xl">{day.getDate()}</div>
           </div>
           <div className="h-full">
-            {dayEvents.map(event => (
-              <div 
-                key={event.id}
-                className="text-xs p-2 mb-1 rounded cursor-pointer"
-                style={{ backgroundColor: event.color + '33' }}
-                onClick={() => editEvent(event)}
-              >
-                <div className="font-semibold">{event.title}</div>
-                <div>
-                  {new Date(event.start).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})} - 
-                  {new Date(event.end).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
-                </div>
-              </div>
-            ))}
+            {dayEvents.map(event => 
+              renderEvent(event as ExtendedEvent)
+            )}
           </div>
         </div>
       )
@@ -405,27 +549,9 @@ export default function CalendarPage() {
               openEventDrawer(newDate)
             }}
           >
-            {eventsByHour[hour]?.map(event => (
-              <div 
-                key={event.id}
-                className="absolute left-0 right-0 mx-1 p-1 text-xs rounded overflow-hidden"
-                style={{ 
-                  backgroundColor: event.color + '33',
-                  top: '2px',
-                  zIndex: 10
-                }}
-                onClick={(e) => {
-                  e.stopPropagation()
-                  editEvent(event)
-                }}
-              >
-                <div className="font-semibold truncate">{event.title}</div>
-                <div>
-                  {new Date(event.start).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})} - 
-                  {new Date(event.end).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
-                </div>
-              </div>
-            ))}
+            {eventsByHour[hour]?.map(event => 
+              renderEvent(event as ExtendedEvent)
+            )}
           </div>
         </div>
       )
@@ -443,52 +569,19 @@ export default function CalendarPage() {
     )
   }
 
-  // Render the appropriate view based on viewType
+  // Render the appropriate calendar view based on viewType
   const renderCalendarView = () => {
-    switch (viewType) {
-      case 'day':
-        return renderDayView()
-      case 'week':
-        return renderWeekView()
-      case 'month':
-      default:
-        return renderMonthView()
+    if (loading) {
+      return (
+        <div className="flex justify-center items-center h-64">
+          <Loader2 className="h-8 w-8 animate-spin text-primary" />
+        </div>
+      )
     }
-  }
-
-  return (
-    <div className="flex min-h-screen">
-      <Sidebar />
-      <main className="ml-64 min-h-screen w-full p-4">
-        <div className="mb-6 flex justify-between items-center">
-          <div className="flex items-center gap-4">
-            <h2 className="text-2xl font-semibold">
-              {date.toLocaleString('default', {
-                month: 'long',
-                year: 'numeric'
-              })}
-            </h2>
-            <div className="flex gap-2">
-              <button 
-                onClick={goToPreviousMonth} 
-                className="px-3 py-1 bg-white border rounded hover:bg-gray-50"
-              >
-                ←
-              </button>
-              <button 
-                onClick={goToToday} 
-                className="px-3 py-1 bg-white border rounded hover:bg-gray-50"
-              >
-                Today
-              </button>
-              <button 
-                onClick={goToNextMonth} 
-                className="px-3 py-1 bg-white border rounded hover:bg-gray-50"
-              >
-                →
-              </button>
-            </div>
-          </div>
+    
+    return (
+      <div>
+        <div className="mb-4 flex justify-end">
           <div className="flex border rounded overflow-hidden">
             <button 
               onClick={() => setViewType('day')} 
@@ -511,13 +604,75 @@ export default function CalendarPage() {
           </div>
         </div>
         
-        {loading ? (
-          <div className="flex justify-center items-center h-64">
-            <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
-          </div>
-        ) : (
-          renderCalendarView()
-        )}
+        {viewType === 'month' && renderMonthView()}
+        {viewType === 'week' && renderWeekView()}
+        {viewType === 'day' && renderDayView()}
+      </div>
+    )
+  }
+
+  return (
+    <div className="flex min-h-screen">
+      <Sidebar />
+      <main className="ml-64 min-h-screen w-full p-6">
+        <div className="max-w-6xl mx-auto">
+          <header className="mb-6">
+            <div className="flex justify-between items-center">
+              <h1 className="text-3xl font-bold">Calendar</h1>
+              <div className="flex items-center space-x-2">
+                {loadingEarnings && (
+                  <div className="flex items-center text-sm text-gray-500">
+                    <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                    Loading earnings...
+                  </div>
+                )}
+                <button
+                  onClick={goToToday}
+                  className="px-3 py-1 border border-gray-300 rounded-md text-sm"
+                >
+                  Today
+                </button>
+                <button
+                  onClick={goToPreviousMonth}
+                  className="p-1 border border-gray-300 rounded-md"
+                >
+                  &lt;
+                </button>
+                <button
+                  onClick={goToNextMonth}
+                  className="p-1 border border-gray-300 rounded-md"
+                >
+                  &gt;
+                </button>
+                <h2 className="text-xl font-semibold ml-2">
+                  {format(date, 'MMMM yyyy')}
+                </h2>
+              </div>
+            </div>
+            
+            <div className="mt-4 flex items-center space-x-4">
+              <div className="flex items-center space-x-1">
+                <div className="w-3 h-3 rounded-full bg-blue-500"></div>
+                <span className="text-sm">Before Market</span>
+              </div>
+              <div className="flex items-center space-x-1">
+                <div className="w-3 h-3 rounded-full bg-purple-500"></div>
+                <span className="text-sm">After Market</span>
+              </div>
+              <div className="flex items-center space-x-1">
+                <div className="w-3 h-3 rounded-full bg-amber-500"></div>
+                <span className="text-sm">During Market</span>
+              </div>
+              <div className="flex items-center space-x-1 ml-4">
+                <Info className="h-4 w-4 text-gray-500" />
+                <span className="text-sm text-gray-600">Click on an earnings event for details</span>
+              </div>
+            </div>
+          </header>
+
+          {/* Calendar view */}
+          {renderCalendarView()}
+        </div>
         
         {/* Event Side Drawer */}
         <div 
@@ -651,6 +806,9 @@ export default function CalendarPage() {
             </div>
           </div>
         </div>
+        
+        {/* Earnings details modal */}
+        {renderEarningsDetails()}
       </main>
     </div>
   )
