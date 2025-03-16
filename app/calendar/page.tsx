@@ -39,7 +39,7 @@ export default function CalendarPage() {
     const fetchEvents = async () => {
       setLoading(true)
       try {
-        const fetchedEvents = await getEvents()
+        const fetchedEvents = await getEvents(user.uid)
         setEvents(fetchedEvents)
       } catch (error) {
         console.error('Error fetching events:', error)
@@ -152,10 +152,14 @@ export default function CalendarPage() {
     try {
       // If editing an existing event, update it
       if (newEvent.id) {
-        const success = await updateEvent(newEvent as Event)
+        const updatedEvent = {
+          ...newEvent as Event,
+          userId: user?.uid
+        }
+        const success = await updateEvent(updatedEvent)
         if (success) {
           setEvents(events.map(event => 
-            event.id === newEvent.id ? (newEvent as Event) : event
+            event.id === newEvent.id ? updatedEvent : event
           ))
         }
       } else {
@@ -165,7 +169,7 @@ export default function CalendarPage() {
           start: newEvent.start,
           end: newEvent.end,
           color: newEvent.color
-        })
+        }, user?.uid)
         
         if (savedEvent) {
           setEvents([...events, savedEvent])
