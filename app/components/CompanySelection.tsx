@@ -1,14 +1,14 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { db } from '@/lib/firebase'
 import { doc, setDoc } from 'firebase/firestore'
 import { User } from 'firebase/auth'
-import { Loader2, Search, ArrowRight, ArrowLeft } from 'lucide-react'
+import { Loader2, Search, ArrowRight, ArrowLeft, Sparkles, Database, AlertCircle } from 'lucide-react'
 import Image from 'next/image'
 
 // This is a list of major companies with their logos
-// In a real app, you would fetch this from an API or database
+// Used as a fallback if the API search fails
 const popularCompanies = [
   { id: 'AAPL', name: 'Apple Inc.', logo: 'https://logo.clearbit.com/apple.com', cik: '0000320193' },
   { id: 'MSFT', name: 'Microsoft Corporation', logo: 'https://logo.clearbit.com/microsoft.com', cik: '0000789019' },
@@ -39,6 +39,23 @@ const occupationOptions = [
   "Other"
 ]
 
+// Type definition for company search results
+type CompanySearchResult = {
+  ticker: string;
+  name: string;
+  cik: string;
+  fromGemini?: boolean;
+  fromFallback?: boolean;
+}
+
+// Type definition for displayed company
+type DisplayedCompany = {
+  id: string;
+  name: string;
+  logo: string;
+  cik: string;
+}
+
 // This component allows users to select companies they want to follow
 export default function CompanySelection({ user, onComplete }: { user: User, onComplete: () => void }) {
   // State to track selected companies
@@ -51,12 +68,97 @@ export default function CompanySelection({ user, onComplete }: { user: User, onC
   const [currentStep, setCurrentStep] = useState(1)
   // State to track selected occupation
   const [occupation, setOccupation] = useState<string | null>(null)
+  // State for search results from API
+  const [searchResults, setSearchResults] = useState<CompanySearchResult[]>([])
+  // State for tracking if search is in progress
+  const [isSearching, setIsSearching] = useState(false)
+  // State for tracking search error
+  const [searchError, setSearchError] = useState<string | null>(null)
+  // State for tracking data source
+  const [usingGemini, setUsingGemini] = useState(false)
+  const [usingFallback, setUsingFallback] = useState(false)
+  // State for companies to display (either search results or filtered popular companies)
+  const [displayedCompanies, setDisplayedCompanies] = useState<DisplayedCompany[]>([])
 
-  // Filter companies based on search term
+  // Filter companies based on search term when no API results
   const filteredCompanies = popularCompanies.filter(company => 
     company.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
     company.id.toLowerCase().includes(searchTerm.toLowerCase())
   )
+
+  // Search for companies using the API
+  const searchCompanies = async () => {
+    if (searchTerm.length < 2) {
+      setSearchResults([]);
+      setSearchError(null);
+      setUsingGemini(false);
+      setUsingFallback(false);
+      return;
+    }
+
+    setIsSearching(true);
+    setSearchError(null);
+    
+    try {
+      const response = await fetch(`/api/company-search?q=${encodeURIComponent(searchTerm)}`);
+      
+      if (!response.ok) {
+        throw new Error(`Search failed: ${response.status}`);
+      }
+      
+      const data = await response.json();
+      
+      // Check if we got an error response
+      if (data.error) {
+        throw new Error(data.error);
+      }
+      
+      setSearchResults(data);
+      
+      // Check the source of the results
+      if (data.length > 0) {
+        setUsingGemini(data[0].fromGemini === true);
+        setUsingFallback(data[0].fromFallback === true);
+      }
+      
+    } catch (error) {
+      console.error('Error searching companies:', error);
+      setSearchError('Failed to search companies. Please try again.');
+      setSearchResults([]);
+    } finally {
+      setIsSearching(false);
+    }
+  };
+
+  // Handle search input changes
+  const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setSearchTerm(e.target.value);
+  };
+
+  // Handle search when user presses Enter
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Enter') {
+      searchCompanies();
+    }
+  };
+
+  // Update displayed companies when search results or filtered companies change
+  useEffect(() => {
+    if (searchResults.length > 0) {
+      // Convert API results to the format expected by the component
+      const formattedResults = searchResults.map(company => ({
+        id: company.ticker,
+        name: company.name,
+        logo: `https://logo.clearbit.com/${company.name.toLowerCase().replace(/[^a-z0-9]/g, '')}.com`,
+        cik: company.cik
+      }));
+      setDisplayedCompanies(formattedResults);
+    } else if (searchTerm && searchTerm.length > 0) {
+      setDisplayedCompanies(filteredCompanies);
+    } else {
+      setDisplayedCompanies(popularCompanies);
+    }
+  }, [searchResults, filteredCompanies, searchTerm]);
 
   // Toggle company selection
   const toggleCompany = (companyId: string) => {
@@ -97,11 +199,21 @@ export default function CompanySelection({ user, onComplete }: { user: User, onC
     try {
       // Convert selected company IDs to full company objects
       const followedCompanies = selectedCompanies.map(id => {
-        const company = popularCompanies.find(c => c.id === id)
+        // First check in displayed companies (which might include API results)
+        const company = displayedCompanies.find(c => c.id === id)
+        // Fallback to popular companies if not found
+        if (!company) {
+          const fallbackCompany = popularCompanies.find(c => c.id === id)
+          return {
+            ticker: fallbackCompany?.id || id,
+            name: fallbackCompany?.name || id,
+            cik: fallbackCompany?.cik || ''
+          }
+        }
         return {
-          ticker: company?.id || id,
-          name: company?.name || id,
-          cik: company?.cik || ''
+          ticker: company.id,
+          name: company.name,
+          cik: company.cik
         }
       })
 
@@ -187,22 +299,66 @@ export default function CompanySelection({ user, onComplete }: { user: User, onC
           </p>
           
           {/* Search bar */}
-          <div className="relative mb-8">
+          <div className="relative mb-2">
             <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
               <Search className="h-5 w-5 text-gray-400" />
             </div>
-            <input
-              type="text"
-              className="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md leading-5 bg-white placeholder-gray-500 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
-              placeholder="Search for companies..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-            />
+            <div className="flex">
+              <input
+                type="text"
+                className="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-l-md leading-5 bg-white placeholder-gray-500 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+                placeholder="Search for companies..."
+                value={searchTerm}
+                onChange={handleSearchChange}
+                onKeyDown={handleKeyDown}
+              />
+              <button
+                className="px-4 py-2 bg-blue-600 text-white rounded-r-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50"
+                onClick={searchCompanies}
+                disabled={isSearching || searchTerm.length < 2}
+              >
+                {isSearching ? (
+                  <Loader2 className="h-5 w-5 animate-spin" />
+                ) : (
+                  'Search'
+                )}
+              </button>
+            </div>
+          </div>
+          
+          {/* Search info and error messages */}
+          <div className="mb-6">
+            {searchError && (
+              <div className="flex items-center text-red-500 mt-2 mb-4 bg-red-50 p-3 rounded-md border border-red-200">
+                <AlertCircle size={16} className="mr-2 flex-shrink-0" />
+                <span>{searchError}</span>
+              </div>
+            )}
+            
+            {usingGemini && searchResults.length > 0 && (
+              <div className="flex items-center text-sm text-blue-600 mt-2">
+                <Sparkles size={14} className="mr-1" />
+                Company information provided by Google Gemini AI
+              </div>
+            )}
+            
+            {usingFallback && searchResults.length > 0 && (
+              <div className="flex items-center text-sm text-gray-500 mt-2">
+                <Database size={14} className="mr-1" />
+                Using sample company data (Gemini API not available)
+              </div>
+            )}
+            
+            {!isSearching && searchTerm.length > 0 && searchResults.length === 0 && !searchError && (
+              <div className="text-sm text-gray-500 mt-2">
+                No results found. Try a different search term or select from popular companies below.
+              </div>
+            )}
           </div>
           
           {/* Company grid */}
           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 mb-8">
-            {filteredCompanies.map(company => (
+            {displayedCompanies.map(company => (
               <div 
                 key={company.id}
                 className={`border rounded-lg p-4 flex flex-col items-center cursor-pointer transition-all ${
