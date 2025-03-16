@@ -16,12 +16,14 @@ import {
   fetchEarningsTranscript,
   EarningsTranscript
 } from './finnhubService'
+import { summarizeTranscript } from './aiService'
 import { format, addMonths, subMonths, startOfMonth, endOfMonth, formatISO } from 'date-fns'
 
 // Extended Event type to include earnings data
 type ExtendedEvent = Event & {
   isEarningsEvent?: boolean;
   earningsData?: EarningsEvent;
+  isSummaryNote?: boolean;
 };
 
 export default function CalendarPage() {
@@ -38,7 +40,7 @@ export default function CalendarPage() {
   const [isShowingEarningsInDrawer, setIsShowingEarningsInDrawer] = useState(false)
   const [loading, setLoading] = useState(true)
   const [loadingEarnings, setLoadingEarnings] = useState(false)
-  const [newEvent, setNewEvent] = useState<Partial<Event>>({
+  const [newEvent, setNewEvent] = useState<Partial<Event & { summaryContent?: string }>>({
     title: '',
     start: new Date(),
     end: new Date(),
@@ -47,6 +49,9 @@ export default function CalendarPage() {
   const [transcriptData, setTranscriptData] = useState<EarningsTranscript | null>(null)
   const [loadingTranscript, setLoadingTranscript] = useState(false)
   const [showingTranscript, setShowingTranscript] = useState(false)
+  const [summaryData, setSummaryData] = useState<string | null>(null)
+  const [loadingSummary, setLoadingSummary] = useState(false)
+  const [savingNote, setSavingNote] = useState(false)
 
   // Redirect if not authenticated
   useEffect(() => {
@@ -223,29 +228,40 @@ export default function CalendarPage() {
     setLoading(true)
     
     try {
+      // Check if this is a summary note
+      const isSummaryNote = newEvent.color === '#10b981' && newEvent.title.includes('Earnings Summary');
+      let finalTitle = newEvent.title;
+      
+      // If this is a summary note, store the content in a special format
+      if (isSummaryNote && newEvent.summaryContent) {
+        // Store a marker in the title to identify this as a summary note
+        finalTitle = `${newEvent.title}::SUMMARY::${newEvent.summaryContent}`;
+      }
+      
       // If editing an existing event, update it
       if (newEvent.id) {
         const updatedEvent = {
           ...newEvent as Event,
+          title: finalTitle,
           userId: user?.uid
         }
         const success = await updateEvent(updatedEvent)
         if (success) {
           setEvents(events.map(event => 
-            event.id === newEvent.id ? updatedEvent : event
+            event.id === newEvent.id ? {...updatedEvent, isSummaryNote} : event
           ))
         }
       } else {
         // Otherwise add a new event
         const savedEvent = await addEvent({
-          title: newEvent.title,
+          title: finalTitle,
           start: newEvent.start,
           end: newEvent.end,
           color: newEvent.color
         }, user?.uid)
         
         if (savedEvent) {
-          setEvents([...events, savedEvent])
+          setEvents([...events, isSummaryNote ? {...savedEvent, isSummaryNote} : savedEvent])
         }
       }
       
@@ -307,6 +323,7 @@ export default function CalendarPage() {
   // Function to fetch and display the transcript
   const viewEarningsTranscript = async (ticker: string, year: number, quarter: number) => {
     setLoadingTranscript(true)
+    setSummaryData(null) // Reset summary when loading a new transcript
     try {
       const transcript = await fetchEarningsTranscript(ticker, year, quarter)
       setTranscriptData(transcript)
@@ -319,9 +336,37 @@ export default function CalendarPage() {
     }
   }
   
+  // Function to generate a summary of the transcript
+  const generateTranscriptSummary = async () => {
+    if (!transcriptData) return
+    
+    setLoadingSummary(true)
+    try {
+      // Combine all transcript sections into a single text
+      const fullText = transcriptData.transcript_split.map(section => 
+        `${section.speaker}: ${section.text}`
+      ).join('\n\n');
+      
+      // Call the Gemini API through our service
+      const result = await summarizeTranscript(fullText);
+      
+      if (result.error) {
+        throw new Error(result.error);
+      }
+      
+      setSummaryData(result.summary);
+    } catch (error) {
+      console.error('Error generating summary:', error);
+      alert('Failed to generate summary. Please try again.');
+    } finally {
+      setLoadingSummary(false);
+    }
+  }
+  
   // Function to go back from transcript view to earnings details
   const backToEarningsDetails = () => {
     setShowingTranscript(false)
+    setSummaryData(null) // Clear summary when navigating away
   }
 
   // Helper function to check if a date has events
@@ -358,23 +403,59 @@ export default function CalendarPage() {
     return `${hours}:${minutes}`
   }
 
-  // Update the renderEvent function to handle earnings events
+  // Update the renderEvent function to handle earnings events and summary notes
   const renderEvent = (event: ExtendedEvent) => {
     const isEarningsEvent = event.isEarningsEvent;
+    const isSummaryNote = event.color === '#10b981' && event.title.includes('Earnings Summary');
     
     return (
       <div
         key={event.id}
         className={`px-2 py-1 rounded text-white text-sm mb-1 truncate cursor-pointer`}
         style={{ backgroundColor: event.color }}
-        onClick={() => isEarningsEvent ? toggleEarningsDetails(event.id) : editEvent(event as Event)}
+        onClick={() => {
+          if (isEarningsEvent) {
+            toggleEarningsDetails(event.id);
+          } else if (isSummaryNote) {
+            editSummaryNote(event);
+          } else {
+            editEvent(event as Event);
+          }
+        }}
       >
         <div className="flex items-center">
           {isEarningsEvent && <DollarSign className="h-3 w-3 mr-1" />}
+          {isSummaryNote && <FileText className="h-3 w-3 mr-1" />}
           <span className="truncate">{event.title}</span>
         </div>
       </div>
     )
+  }
+
+  // Function to edit a summary note
+  const editSummaryNote = (event: ExtendedEvent) => {
+    // Extract the title and summary content
+    let title = event.title;
+    let summaryContent = '';
+    
+    // Check if the title contains the special summary marker
+    if (event.title.includes('::SUMMARY::')) {
+      const parts = event.title.split('::SUMMARY::');
+      title = parts[0];
+      summaryContent = parts[1] || '';
+    }
+    
+    setNewEvent({
+      ...event,
+      title: title, // Just keep the main title part
+      summaryContent: summaryContent,
+      start: new Date(event.start),
+      end: new Date(event.end)
+    });
+    
+    setShowEventDrawer(true);
+    setIsShowingEarningsInDrawer(false);
+    setShowingTranscript(false);
   }
 
   // Month View Rendering
@@ -574,6 +655,52 @@ export default function CalendarPage() {
     )
   }
 
+  // Function to save the summary as a calendar note
+  const saveSummaryAsNote = async () => {
+    if (!transcriptData || !summaryData || !showEarningsDetails) return;
+    
+    setSavingNote(true);
+    try {
+      // Find the original earnings event
+      const earningsEvent = events.find(e => e.id === showEarningsDetails);
+      if (!earningsEvent || !earningsEvent.earningsData) {
+        throw new Error('Could not find earnings event data');
+      }
+      
+      // Create a date for the note based on the earnings event date
+      const eventDate = new Date(earningsEvent.start);
+      const endDate = new Date(eventDate);
+      endDate.setHours(endDate.getHours() + 1); // Add 1 hour for the event duration
+      
+      // Format the note title with the earnings information and include the summary content
+      const noteTitle = `${earningsEvent.earningsData.companyName || earningsEvent.earningsData.symbol} Earnings Summary`;
+      const finalTitle = `${noteTitle}::SUMMARY::${summaryData}`;
+      
+      // Save the note as a calendar event
+      const savedEvent = await addEvent({
+        title: finalTitle,
+        start: eventDate,
+        end: endDate,
+        color: '#10b981' // Green color for notes
+      }, user?.uid);
+      
+      if (savedEvent) {
+        // Add the full saved event to the events list
+        const fullEvent: ExtendedEvent = {
+          ...savedEvent,
+          isSummaryNote: true
+        };
+        setEvents(prev => [...prev, fullEvent]);
+        alert('Summary saved as a calendar note!');
+      }
+    } catch (error) {
+      console.error('Error saving summary as note:', error);
+      alert('Failed to save summary as note. Please try again.');
+    } finally {
+      setSavingNote(false);
+    }
+  };
+
   return (
     <div className="flex min-h-screen">
       <Sidebar />
@@ -687,6 +814,49 @@ export default function CalendarPage() {
                         <p className="font-medium">{transcriptData.date}</p>
                       </div>
                       
+                      {/* Summary button and result */}
+                      <div className="mb-6">
+                        {!summaryData && !loadingSummary ? (
+                          <button
+                            onClick={generateTranscriptSummary}
+                            className="w-full flex items-center justify-center py-2 px-4 bg-green-50 text-green-600 rounded hover:bg-green-100 transition-colors"
+                          >
+                            <Info className="h-4 w-4 mr-2" />
+                            Summarize for me
+                          </button>
+                        ) : loadingSummary ? (
+                          <div className="w-full py-4 bg-gray-50 rounded flex items-center justify-center">
+                            <Loader2 className="h-5 w-5 animate-spin text-gray-500 mr-2" />
+                            <span className="text-gray-500">Generating summary...</span>
+                          </div>
+                        ) : (
+                          <div className="space-y-4">
+                            <div className="bg-green-50 p-4 rounded border border-green-100 mb-4">
+                              <h4 className="font-medium text-green-700 mb-2">Summary</h4>
+                              <p className="text-sm text-gray-700">{summaryData}</p>
+                            </div>
+                            
+                            <button
+                              onClick={saveSummaryAsNote}
+                              disabled={savingNote}
+                              className="w-full flex items-center justify-center py-2 px-4 bg-blue-50 text-blue-600 rounded hover:bg-blue-100 transition-colors disabled:opacity-50"
+                            >
+                              {savingNote ? (
+                                <>
+                                  <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                                  Saving...
+                                </>
+                              ) : (
+                                <>
+                                  <FileText className="h-4 w-4 mr-2" />
+                                  Save as Calendar Note
+                                </>
+                              )}
+                            </button>
+                          </div>
+                        )}
+                      </div>
+                      
                       <div className="space-y-6">
                         {transcriptData.transcript_split.slice(0, 10).map((section, index) => (
                           <div key={index} className="pb-4 border-b border-gray-100">
@@ -766,7 +936,7 @@ export default function CalendarPage() {
                   );
                 })()
               ) : (
-                // Regular event edit view
+                // Regular event edit view or Summary Note view
                 <>
                   <div className="mb-4">
                     <label className="block text-sm font-medium mb-1">Title</label>
@@ -780,6 +950,21 @@ export default function CalendarPage() {
                       disabled={loading}
                     />
                   </div>
+                  
+                  {/* Summary content field for summary notes */}
+                  {newEvent.color === '#10b981' && newEvent.title?.includes('Earnings Summary') && (
+                    <div className="mb-4">
+                      <label className="block text-sm font-medium mb-1">Summary Content</label>
+                      <textarea
+                        name="summaryContent"
+                        value={newEvent.summaryContent || ''}
+                        onChange={(e) => setNewEvent({...newEvent, summaryContent: e.target.value})}
+                        className="w-full p-2 border rounded h-40 resize-none"
+                        placeholder="Summary content"
+                        disabled={loading}
+                      />
+                    </div>
+                  )}
                   
                   <div className="mb-4">
                     <label className="block text-sm font-medium mb-1">Start Date</label>
@@ -883,7 +1068,17 @@ export default function CalendarPage() {
                         Cancel
                       </button>
                       <button
-                        onClick={saveEvent}
+                        onClick={() => {
+                          // For summary notes, include the summary content in the title
+                          if (newEvent.color === '#10b981' && newEvent.title?.includes('Earnings Summary') && newEvent.summaryContent) {
+                            const updatedEvent = {
+                              ...newEvent,
+                              title: newEvent.title
+                            };
+                            setNewEvent(updatedEvent);
+                          }
+                          saveEvent();
+                        }}
                         className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 disabled:opacity-50"
                         disabled={loading}
                       >
