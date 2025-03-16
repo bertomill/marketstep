@@ -22,7 +22,9 @@ export function Sidebar() {
   return (
     <div className="fixed top-0 left-0 h-screen w-64 flex flex-col border-r bg-white z-40">
       <div className="p-4">
-        <h2 className="text-lg font-semibold mb-4">MarketStep</h2>
+        <Link href="/" className="inline-block">
+          <h2 className="text-lg font-semibold mb-4 hover:text-primary cursor-pointer">MarketStep</h2>
+        </Link>
         <Separator className="my-2" />
       </div>
       <ScrollArea className="flex-1 px-4">
