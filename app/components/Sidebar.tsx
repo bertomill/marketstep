@@ -4,8 +4,21 @@ import { ScrollArea } from "@/components/ui/scroll-area"
 import { Separator } from "@/components/ui/separator"
 import { Button } from "@/components/ui/button"
 import Link from "next/link"
+import { useAuth } from "@/lib/auth"
+import { LogOut } from "lucide-react"
 
 export function Sidebar() {
+  const { logout } = useAuth()
+
+  // This function handles user logout
+  const handleLogout = async () => {
+    try {
+      await logout()
+    } catch (error) {
+      console.error('Logout error:', error)
+    }
+  }
+
   return (
     <div className="fixed top-0 left-0 h-screen w-64 flex flex-col border-r bg-white z-40">
       <div className="p-4">
@@ -37,10 +50,14 @@ export function Sidebar() {
         </div>
       </ScrollArea>
       <Separator />
-      <div className="p-4">
+      <div className="p-4 space-y-2">
         <Button variant="outline" className="w-full">
           <UserIcon className="mr-2 h-4 w-4" />
           Profile
+        </Button>
+        <Button variant="outline" className="w-full" onClick={handleLogout}>
+          <LogOut className="mr-2 h-4 w-4" />
+          Logout
         </Button>
       </div>
     </div>

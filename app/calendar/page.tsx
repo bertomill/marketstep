@@ -3,8 +3,15 @@
 import { Sidebar } from '../components/Sidebar'
 import { useState, ReactNode, useEffect } from 'react'
 import { Event, getEvents, addEvent, updateEvent, deleteEvent } from './calendarService'
+import { useAuth } from '@/lib/auth'
+import { useRouter } from 'next/navigation'
+import { Loader2 } from 'lucide-react'
 
 export default function CalendarPage() {
+  // Authentication check
+  const { user, loading: authLoading } = useAuth()
+  const router = useRouter()
+  
   // State for current date and view type
   const [date, setDate] = useState(new Date())
   const [viewType, setViewType] = useState('month') // 'day', 'week', or 'month'
@@ -18,8 +25,17 @@ export default function CalendarPage() {
     color: '#3b82f6' // Default blue color
   })
 
+  // Redirect if not authenticated
+  useEffect(() => {
+    if (!authLoading && !user) {
+      router.push('/')
+    }
+  }, [user, authLoading, router])
+
   // Load events from Firebase on component mount
   useEffect(() => {
+    if (!user) return; // Skip fetching if user isn't authenticated
+    
     const fetchEvents = async () => {
       setLoading(true)
       try {
@@ -33,7 +49,21 @@ export default function CalendarPage() {
     }
 
     fetchEvents()
-  }, [])
+  }, [user])
+
+  // Show loading state while checking authentication
+  if (authLoading) {
+    return (
+      <div className="flex min-h-screen items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    )
+  }
+
+  // If not authenticated, don't render the page content
+  if (!user) {
+    return null
+  }
 
   const currentMonth = date.getMonth()
   const currentYear = date.getFullYear()
@@ -423,9 +453,9 @@ export default function CalendarPage() {
   }
 
   return (
-    <main className="flex min-h-screen relative">
+    <div className="flex min-h-screen">
       <Sidebar />
-      <div className={`p-6 flex-1 transition-all duration-300 ${showEventDrawer ? 'mr-96' : ''}`}>
+      <main className="ml-64 min-h-screen w-full p-4">
         <div className="mb-6 flex justify-between items-center">
           <div className="flex items-center gap-4">
             <h2 className="text-2xl font-semibold">
@@ -617,7 +647,7 @@ export default function CalendarPage() {
             </div>
           </div>
         </div>
-      </div>
-    </main>
+      </main>
+    </div>
   )
 } 

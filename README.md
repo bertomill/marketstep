@@ -1,3 +1,66 @@
+# MarketStep
+
+MarketStep is a financial market companion app that helps users track market movements, analyze SEC filings, and plan investments.
+
+## Authentication with Firebase
+
+MarketStep uses Firebase Authentication for user management. Here's how it works:
+
+### Features
+
+- Email/password authentication
+- Google sign-in
+- Protected routes (only accessible to authenticated users)
+- Landing page for non-authenticated users
+
+### Setup Instructions
+
+1. Create a Firebase project at [firebase.google.com](https://firebase.google.com)
+
+2. Enable Authentication in your Firebase project:
+   - Go to Authentication > Sign-in method
+   - Enable Email/Password
+   - Enable Google sign-in
+
+3. Create a `.env.local` file in the root of your project based on the `.env.local.example` file:
+   ```
+   NEXT_PUBLIC_FIREBASE_API_KEY=your-api-key
+   NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN=your-project-id.firebaseapp.com
+   NEXT_PUBLIC_FIREBASE_PROJECT_ID=your-project-id
+   NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET=your-project-id.appspot.com
+   NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID=your-messaging-sender-id
+   NEXT_PUBLIC_FIREBASE_APP_ID=your-app-id
+   ```
+
+4. Run the development server:
+   ```bash
+   npm run dev
+   ```
+
+## Project Structure
+
+- `lib/auth.tsx` - Authentication context provider
+- `lib/firebase.ts` - Firebase configuration
+- `components/AuthComponents.tsx` - Login/signup components
+- `app/Landing.tsx` - Landing page for non-authenticated users
+- `app/page.tsx` - Main application page that conditionally renders based on auth state
+- `app/components/Sidebar.tsx` - Navigation sidebar with logout button
+
+## How It Works
+
+1. The application is wrapped with `AuthProvider` in `app/layout.tsx`
+2. `useAuth` hook provides authentication state and methods throughout the app
+3. The main page checks auth state and shows either the landing page or the app
+4. Protected routes check for authentication and redirect to home if not authenticated
+
+## Development
+
+To add a new protected page:
+
+1. Use the `useAuth` hook to get the current user
+2. Check if the user is authenticated
+3. Redirect to the home page if not authenticated
+
 This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
 
 ## Getting Started
