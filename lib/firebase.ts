@@ -1,6 +1,7 @@
 // This file sets up the Firebase connection for our app
 import { initializeApp } from 'firebase/app';
 import { getAuth } from 'firebase/auth';
+import { getFirestore } from 'firebase/firestore';
 
 // Your Firebase configuration
 // Replace these with your actual Firebase project details
@@ -19,4 +20,7 @@ const app = initializeApp(firebaseConfig);
 // Initialize Firebase Authentication
 const auth = getAuth(app);
 
-export { auth }; 
+// Initialize Firestore
+const db = getFirestore(app);
+
+export { auth, db }; 

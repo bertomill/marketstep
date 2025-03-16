@@ -5,7 +5,7 @@ import { Separator } from "@/components/ui/separator"
 import { Button } from "@/components/ui/button"
 import Link from "next/link"
 import { useAuth } from "@/lib/auth"
-import { LogOut } from "lucide-react"
+import { LogOut, Star } from "lucide-react"
 
 export function Sidebar() {
   const { logout } = useAuth()
@@ -43,6 +43,12 @@ export function Sidebar() {
             <Link href="/sec-filings">
               <FileTextIcon className="mr-2 h-4 w-4" />
               SEC Filings
+            </Link>
+          </Button>
+          <Button variant="ghost" className="w-full justify-start" asChild>
+            <Link href="/my-companies">
+              <Star className="mr-2 h-4 w-4" />
+              My Companies
             </Link>
           </Button>
           <Button variant="ghost" className="w-full justify-start">
