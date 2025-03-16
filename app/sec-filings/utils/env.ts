@@ -46,6 +46,12 @@ export function loadEnvVariables() {
 // Get the Gemini API key from environment variables
 // Falls back to a default value if not found
 export function getGeminiApiKey(): string {
+  // First try to get the key from Next.js environment variables
+  if (process.env.NEXT_PUBLIC_GEMINI_API_KEY) {
+    return process.env.NEXT_PUBLIC_GEMINI_API_KEY;
+  }
+  
+  // Fall back to the local .env file if needed
   const envVars = loadEnvVariables();
   return envVars.GEMINI_API_KEY || '';
-} 
+}

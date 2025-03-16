@@ -2,35 +2,44 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getGeminiApiKey } from '../../utils/env';
 
 // Get the API key from environment variables
-const GEMINI_API_KEY = getGeminiApiKey();
-const GEMINI_API_URL = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent';
+// Try to get the key directly from Next.js environment variables first
+const GEMINI_API_KEY = process.env.NEXT_PUBLIC_GEMINI_API_KEY || getGeminiApiKey();
+const GEMINI_API_URL = 'https://generativelanguage.googleapis.com/v1/models/gemini-1.5-flash:generateContent';
 
 // This function searches for company information using Gemini
 async function searchCompanyWithGemini(query: string) {
   try {
     // Check if we have an API key
     if (!GEMINI_API_KEY) {
-      console.warn('No Gemini API key found in environment variables');
+      console.warn('No Gemini API key found in environment variables. Make sure NEXT_PUBLIC_GEMINI_API_KEY is set in your .env.local file.');
       return [];
     }
 
     // Create a prompt that asks for company information including CIK
     const prompt = `
-      I need information about the company "${query}". 
-      Please provide the following in JSON format:
+      I need information about companies matching "${query}". 
+      Please provide details for up to 5 most relevant companies in JSON format.
+      For each company include:
       1. Full company name
       2. Stock ticker symbol
       3. CIK (Central Index Key) number from SEC EDGAR
+      4. Brief description (1-2 sentences about what the company does)
+      5. Industry sector
       
-      Format the response as valid JSON with these fields:
-      {
-        "name": "Company Name",
-        "ticker": "SYMBOL",
-        "cik": "0000123456"
-      }
+      Format the response as valid JSON array with these fields for each company:
+      [
+        {
+          "name": "Company Name",
+          "ticker": "SYMBOL",
+          "cik": "0000123456",
+          "description": "Brief description of the company",
+          "sector": "Industry sector"
+        },
+        ...
+      ]
       
-      If you can't find the information or are unsure, return an empty array: []
-      Only return the JSON, no other text.
+      If you can't find any matching companies, return an empty array: []
+      Only return the JSON array, no other text.
     `;
 
     // Call the Gemini API
@@ -62,25 +71,33 @@ async function searchCompanyWithGemini(query: string) {
     // Try to parse the JSON response
     try {
       // Find JSON in the response (in case there's extra text)
-      const jsonMatch = textResponse.match(/\{[\s\S]*\}/);
-      if (!jsonMatch) return [];
+      const jsonMatch = textResponse.match(/\[\s*\{[\s\S]*\}\s*\]/);
       
-      const jsonData = JSON.parse(jsonMatch[0]);
-      
-      // If we got a valid company, return it as an array with a source flag
-      if (jsonData.name && jsonData.ticker && jsonData.cik) {
-        return [{
-          ...jsonData,
-          fromGemini: true
-        }];
-      }
-      
-      // If we got an array, add the source flag to each item
-      if (Array.isArray(jsonData)) {
-        return jsonData.map(item => ({
-          ...item,
-          fromGemini: true
-        }));
+      if (jsonMatch) {
+        // Parse the JSON array
+        const jsonArray = JSON.parse(jsonMatch[0]);
+        
+        // Add the source flag to each item
+        if (Array.isArray(jsonArray) && jsonArray.length > 0) {
+          return jsonArray.map(item => ({
+            ...item,
+            fromGemini: true
+          }));
+        }
+      } else {
+        // Try to parse as a single object (for backward compatibility)
+        const singleJsonMatch = textResponse.match(/\{[\s\S]*\}/);
+        if (singleJsonMatch) {
+          const jsonData = JSON.parse(singleJsonMatch[0]);
+          
+          // If we got a valid company, return it as an array with a source flag
+          if (jsonData.name && jsonData.ticker && jsonData.cik) {
+            return [{
+              ...jsonData,
+              fromGemini: true
+            }];
+          }
+        }
       }
       
       return [];
@@ -96,14 +113,37 @@ async function searchCompanyWithGemini(query: string) {
 
 // Fallback sample companies in case the API fails
 const FALLBACK_COMPANIES = [
-  { ticker: 'AAPL', name: 'Apple Inc.', cik: '0000320193' },
-  { ticker: 'MSFT', name: 'Microsoft Corporation', cik: '0000789019' },
-  { ticker: 'GOOGL', name: 'Alphabet Inc.', cik: '0001652044' },
+  { 
+    ticker: 'AAPL', 
+    name: 'Apple Inc.', 
+    cik: '0000320193',
+    description: 'Designs, manufactures, and markets smartphones, personal computers, tablets, wearables, and accessories.',
+    sector: 'Technology'
+  },
+  { 
+    ticker: 'MSFT', 
+    name: 'Microsoft Corporation', 
+    cik: '0000789019',
+    description: 'Develops, licenses, and supports software, services, devices, and solutions worldwide.',
+    sector: 'Technology'
+  },
+  { 
+    ticker: 'GOOGL', 
+    name: 'Alphabet Inc.', 
+    cik: '0001652044',
+    description: 'Provides online advertising services, search engine, cloud computing, software, and hardware.',
+    sector: 'Technology'
+  },
 ];
 
 // This function handles the search request
 export async function GET(request: NextRequest) {
   try {
+    // Log environment variables for debugging
+    console.log('Environment check:');
+    console.log('- NEXT_PUBLIC_GEMINI_API_KEY exists:', !!process.env.NEXT_PUBLIC_GEMINI_API_KEY);
+    console.log('- Using API key:', GEMINI_API_KEY ? 'Yes (key found)' : 'No (key missing)');
+    
     // Get the search query from the URL
     const searchParams = request.nextUrl.searchParams;
     const query = searchParams.get('q')?.toLowerCase() || '';

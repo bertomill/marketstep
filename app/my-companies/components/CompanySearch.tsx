@@ -11,6 +11,8 @@ type Company = {
   ticker: string;
   name: string;
   cik: string;
+  description?: string;
+  sector?: string;
   fromGemini?: boolean;
   fromFallback?: boolean;
 };
@@ -22,11 +24,41 @@ type CompanySearchProps = {
 
 // Popular companies for quick selection
 const POPULAR_COMPANIES = [
-  { ticker: 'AAPL', name: 'Apple Inc.', cik: '0000320193' },
-  { ticker: 'MSFT', name: 'Microsoft Corporation', cik: '0000789019' },
-  { ticker: 'GOOGL', name: 'Alphabet Inc.', cik: '0001652044' },
-  { ticker: 'AMZN', name: 'Amazon.com, Inc.', cik: '0001018724' },
-  { ticker: 'META', name: 'Meta Platforms, Inc.', cik: '0001326801' },
+  { 
+    ticker: 'AAPL', 
+    name: 'Apple Inc.', 
+    cik: '0000320193',
+    description: 'Designs, manufactures, and markets smartphones, personal computers, tablets, wearables, and accessories.',
+    sector: 'Technology'
+  },
+  { 
+    ticker: 'MSFT', 
+    name: 'Microsoft Corporation', 
+    cik: '0000789019',
+    description: 'Develops, licenses, and supports software, services, devices, and solutions worldwide.',
+    sector: 'Technology'
+  },
+  { 
+    ticker: 'GOOGL', 
+    name: 'Alphabet Inc.', 
+    cik: '0001652044',
+    description: 'Provides online advertising services, search engine, cloud computing, software, and hardware.',
+    sector: 'Technology'
+  },
+  { 
+    ticker: 'AMZN', 
+    name: 'Amazon.com, Inc.', 
+    cik: '0001018724',
+    description: 'Engages in the retail sale of consumer products and subscriptions through online and physical stores.',
+    sector: 'Consumer Cyclical'
+  },
+  { 
+    ticker: 'META', 
+    name: 'Meta Platforms, Inc.', 
+    cik: '0001326801',
+    description: 'Develops products that enable people to connect and share through mobile devices, personal computers, and other surfaces.',
+    sector: 'Communication Services'
+  },
 ];
 
 export function CompanySearch({ userId, onCompanyFollowed }: CompanySearchProps) {
@@ -191,16 +223,30 @@ export function CompanySearch({ userId, onCompanyFollowed }: CompanySearchProps)
 
       {/* Data source indicators */}
       {usingGemini && results.length > 0 && (
-        <div className="flex items-center text-sm text-blue-600 mb-2">
-          <Sparkles size={14} className="mr-1" />
-          Company information provided by Google Gemini AI
+        <div className="flex items-center text-sm bg-gradient-to-r from-blue-50 to-purple-50 p-3 rounded-md border border-blue-100 mb-4">
+          <Sparkles size={16} className="mr-2 text-blue-500" />
+          <div>
+            <span className="font-medium text-blue-700">Powered by Google Gemini AI</span>
+            <p className="text-gray-600 mt-1">
+              Company information is generated using artificial intelligence and may require verification.
+            </p>
+          </div>
         </div>
       )}
 
       {usingFallback && results.length > 0 && (
-        <div className="flex items-center text-sm text-gray-500 mb-2">
-          <Database size={14} className="mr-1" />
-          Using sample company data (Gemini API not available)
+        <div className="flex items-center text-sm bg-gray-50 p-3 rounded-md border border-gray-200 mb-4">
+          <Database size={16} className="mr-2 text-gray-500" />
+          <div>
+            <span className="font-medium text-gray-700">Using sample company data</span>
+            <p className="text-gray-600 mt-1">
+              Gemini AI is currently unavailable. Showing results from our local database.
+              <br />
+              <span className="text-blue-600">
+                To enable AI-powered search, add your Gemini API key to the .env.local file as NEXT_PUBLIC_GEMINI_API_KEY.
+              </span>
+            </p>
+          </div>
         </div>
       )}
 
@@ -214,9 +260,19 @@ export function CompanySearch({ userId, onCompanyFollowed }: CompanySearchProps)
                 className="p-4 hover:bg-gray-50 transition-colors"
               >
                 <div className="flex items-center justify-between">
-                  <div>
+                  <div className="flex-1 pr-4">
                     <div className="font-medium text-lg">{company.ticker} - {company.name}</div>
-                    <div className="text-sm text-gray-500">CIK: {company.cik}</div>
+                    {company.sector && (
+                      <div className="text-sm text-blue-600 mt-1">
+                        Industry: {company.sector}
+                      </div>
+                    )}
+                    {company.description && (
+                      <div className="text-sm text-gray-700 mt-1">
+                        {company.description}
+                      </div>
+                    )}
+                    <div className="text-sm text-gray-500 mt-1">CIK: {company.cik}</div>
                   </div>
                   <Button 
                     variant={followingStatus[company.ticker] ? "secondary" : "default"}
