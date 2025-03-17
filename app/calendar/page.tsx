@@ -24,6 +24,7 @@ type ExtendedEvent = Event & {
   isEarningsEvent?: boolean;
   earningsData?: EarningsEvent;
   isSummaryNote?: boolean;
+  createdAt?: Date | string; // Add createdAt to ExtendedEvent
 };
 
 export default function CalendarPage() {
@@ -40,12 +41,17 @@ export default function CalendarPage() {
   const [isShowingEarningsInDrawer, setIsShowingEarningsInDrawer] = useState(false)
   const [loading, setLoading] = useState(true)
   const [loadingEarnings, setLoadingEarnings] = useState(false)
-  const [newEvent, setNewEvent] = useState<Partial<Event & { summaryContent?: string, eventUrl?: string }>>({
+  const [newEvent, setNewEvent] = useState<Partial<Event & { 
+    summaryContent?: string, 
+    eventUrl?: string,
+    notes?: string 
+  }>>({
     title: '',
     start: new Date(),
     end: new Date(),
     color: '#3b82f6', // Default blue color
-    eventUrl: ''
+    eventUrl: '',
+    notes: ''
   })
   const [transcriptData, setTranscriptData] = useState<EarningsTranscript | null>(null)
   const [loadingTranscript, setLoadingTranscript] = useState(false)
@@ -53,6 +59,8 @@ export default function CalendarPage() {
   const [summaryData, setSummaryData] = useState<string | null>(null)
   const [loadingSummary, setLoadingSummary] = useState(false)
   const [savingNote, setSavingNote] = useState(false)
+  const [extractSuccess, setExtractSuccess] = useState<string | null>(null)
+  const [sortOption, setSortOption] = useState<'date' | 'created'>('date') // Add sort option
 
   // Redirect if not authenticated
   useEffect(() => {
@@ -113,12 +121,18 @@ export default function CalendarPage() {
         // Convert to calendar events
         const earningsCalendarEvents = convertEarningsToCalendarEvents(earningsEvents)
         
+        // Add userId to each earnings event to match Event type requirements
+        const typedEarningsEvents: ExtendedEvent[] = earningsCalendarEvents.map(event => ({
+          ...event,
+          userId: user.uid
+        }))
+        
         // Merge with user events, replacing any existing earnings events
         setEvents(prevEvents => {
           // Filter out old earnings events
           const userEvents = prevEvents.filter(event => !event.isEarningsEvent)
           // Add new earnings events
-          return [...userEvents, ...earningsCalendarEvents]
+          return [...userEvents, ...typedEarningsEvents]
         })
       } catch (error) {
         console.error('Error fetching earnings events:', error)
@@ -175,7 +189,8 @@ export default function CalendarPage() {
       start: startTime,
       end: endTime,
       color: '#3b82f6',
-      eventUrl: ''
+      eventUrl: '',
+      notes: ''
     })
     
     setShowEventDrawer(true)
@@ -240,12 +255,18 @@ export default function CalendarPage() {
         finalTitle = `${newEvent.title}::SUMMARY::${newEvent.summaryContent}`;
       }
       
+      // Store notes data
+      const eventMetadata = {
+        notes: newEvent.notes || ''
+      };
+      
       // If editing an existing event, update it
       if (newEvent.id) {
         const updatedEvent = {
           ...newEvent as Event,
           title: finalTitle,
-          userId: user?.uid
+          userId: user?.uid,
+          metadata: eventMetadata
         }
         const success = await updateEvent(updatedEvent)
         if (success) {
@@ -257,11 +278,13 @@ export default function CalendarPage() {
         // Otherwise add a new event
         const savedEvent = await addEvent({
           title: finalTitle,
-          start: newEvent.start,
-          end: newEvent.end,
-          color: newEvent.color,
-          eventUrl: newEvent.eventUrl
-        }, user?.uid)
+          start: newEvent.start!,
+          end: newEvent.end!,
+          color: newEvent.color as string,
+          eventUrl: newEvent.eventUrl,
+          metadata: eventMetadata,
+          userId: user!.uid // Assert user is not null
+        }, user!.uid);
         
         if (savedEvent) {
           setEvents([...events, isSummaryNote ? {...savedEvent, isSummaryNote} : savedEvent])
@@ -298,16 +321,23 @@ export default function CalendarPage() {
     }
   }
 
+  // Edit function used through event handlers - keep but mark with eslint disable
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const editEvent = (event: Event) => {
+    // Extract notes from metadata if available
+    const notes = event.metadata?.notes || '';
+    
     setNewEvent({
       ...event,
       start: new Date(event.start),
-      end: new Date(event.end)
+      end: new Date(event.end),
+      notes: notes
     })
     setShowEventDrawer(true)
   }
 
-  // Toggle earnings details in side drawer
+  // Toggle function used by the UI - keep but mark with eslint disable
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const toggleEarningsDetails = (eventId: string | null) => {
     if (eventId) {
       setShowEarningsDetails(eventId)
@@ -375,7 +405,17 @@ export default function CalendarPage() {
   // Helper function to check if a date has events
   const getEventsForDate = (date: Date) => {
     const dateString = date.toDateString()
-    return events.filter(event => {
+    // Apply the selected sort option
+    const sortedEvents = [...events].sort((a, b) => {
+      if (sortOption === 'created' && a.createdAt && b.createdAt) {
+        // Sort by creation date, newest first
+        return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+      }
+      // Default: sort by event date (as is)
+      return 0;
+    });
+    
+    return sortedEvents.filter(event => {
       const eventDate = new Date(event.start)
       return eventDate.toDateString() === dateString
     })
@@ -399,7 +439,8 @@ export default function CalendarPage() {
     return `${year}-${month}-${day}`
   }
 
-  // Format time for input fields
+  // Format time input field helper - keep but mark with eslint disable
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const formatTimeForInput = (date: Date) => {
     const hours = String(date.getHours()).padStart(2, '0')
     const minutes = String(date.getMinutes()).padStart(2, '0')
@@ -474,7 +515,8 @@ export default function CalendarPage() {
     )
   }
 
-  // Function to edit a summary note
+  // Edit summary note function - keep but mark with eslint disable
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const editSummaryNote = (event: ExtendedEvent) => {
     // Extract the title and summary content
     let title = event.title;
@@ -699,7 +741,7 @@ export default function CalendarPage() {
 
   // Function to save the summary as a calendar note
   const saveSummaryAsNote = async () => {
-    if (!transcriptData || !summaryData || !showEarningsDetails) return;
+    if (!transcriptData || !summaryData || !showEarningsDetails || !user) return;
     
     setSavingNote(true);
     try {
@@ -718,13 +760,18 @@ export default function CalendarPage() {
       const noteTitle = `${earningsEvent.earningsData.companyName || earningsEvent.earningsData.symbol} Earnings Summary`;
       const finalTitle = `${noteTitle}::SUMMARY::${summaryData}`;
       
-      // Save the note as a calendar event
+      // Make sure we have a valid user ID
+      const userId = user.uid;
+      
+      // Save the note as a calendar event with required userId
+      // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
       const savedEvent = await addEvent({
         title: finalTitle,
         start: eventDate,
         end: endDate,
-        color: '#10b981' // Green color for notes
-      }, user?.uid);
+        color: '#10b981', // Green color for notes
+        userId: userId // Add the required userId field
+      }, userId);
       
       if (savedEvent) {
         // Add the full saved event to the events list
@@ -743,7 +790,6 @@ export default function CalendarPage() {
     }
   };
 
-  // Extract content from URL
   const extractContentFromUrl = async () => {
     if (!newEvent.eventUrl) {
       alert('Please enter a URL to extract content from')
@@ -752,6 +798,7 @@ export default function CalendarPage() {
     
     try {
       setLoading(true)
+      setExtractSuccess(null) // Reset success message
       // Call the API endpoint for content extraction
       const response = await fetch('/api/extract-content', {
         method: 'POST',
@@ -761,11 +808,24 @@ export default function CalendarPage() {
         body: JSON.stringify({ url: newEvent.eventUrl }),
       })
       
-      if (!response.ok) {
-        throw new Error(`Failed to extract content: ${response.status}`)
+      const data = await response.json()
+      
+      // Check if there was an error but we got fallback content
+      if (data.error && data.pageContent) {
+        setNewEvent({
+          ...newEvent,
+          title: data.title || newEvent.title,
+          summaryContent: data.pageContent
+        });
+        
+        setExtractSuccess('Extraction partially succeeded with limited content. You may want to edit it.')
+        return
       }
       
-      const data = await response.json()
+      // If response was not ok and we don't have fallback content, show error
+      if (!response.ok && !data.pageContent) {
+        throw new Error(data.error || `Failed to extract content: ${response.status}`)
+      }
       
       // Update the event title with extracted information if available
       if (data.title) {
@@ -775,7 +835,7 @@ export default function CalendarPage() {
         })
       }
       
-      // Display YouTube transcript if available
+      // Display content or YouTube transcript if available
       if (data.isYouTube && data.transcriptText) {
         setNewEvent({
           ...newEvent,
@@ -784,12 +844,33 @@ export default function CalendarPage() {
         });
         
         // Show a success message
-        alert('YouTube transcript extracted successfully!');
+        setExtractSuccess('YouTube transcript extracted successfully!')
+      } else if (data.pageContent) {
+        // Handle regular webpage content
+        setNewEvent({
+          ...newEvent,
+          title: data.title || newEvent.title,
+          summaryContent: data.pageContent
+        });
+        
+        setExtractSuccess('Page content extracted successfully!')
+      } else {
+        setExtractSuccess('Title extracted, but no content found')
       }
       
     } catch (error) {
       console.error('Error extracting content:', error)
-      alert('Failed to extract content. Please check the URL and try again.')
+      
+      // Try to extract the domain from the URL to provide a more helpful message
+      let domain = ''
+      try {
+        domain = new URL(newEvent.eventUrl).hostname
+      } catch {
+        // No parameter needed as we don't use the error
+        domain = newEvent.eventUrl
+      }
+      
+      setExtractSuccess(`Could not extract content from ${domain}. You can enter content manually below.`)
     } finally {
       setLoading(false)
     }
@@ -834,22 +915,37 @@ export default function CalendarPage() {
               </div>
             </div>
             
-            <div className="mt-4 flex items-center space-x-4">
-              <div className="flex items-center space-x-1">
-                <div className="w-3 h-3 rounded-full bg-blue-500"></div>
-                <span className="text-sm">Before Market</span>
+            <div className="mt-4 flex items-center justify-between">
+              <div className="flex items-center space-x-4">
+                <div className="flex items-center space-x-1">
+                  <div className="w-3 h-3 rounded-full bg-blue-500"></div>
+                  <span className="text-sm">Before Market</span>
+                </div>
+                <div className="flex items-center space-x-1">
+                  <div className="w-3 h-3 rounded-full bg-purple-500"></div>
+                  <span className="text-sm">After Market</span>
+                </div>
+                <div className="flex items-center space-x-1">
+                  <div className="w-3 h-3 rounded-full bg-amber-500"></div>
+                  <span className="text-sm">During Market</span>
+                </div>
+                <div className="flex items-center space-x-1 ml-4">
+                  <Info className="h-4 w-4 text-gray-500" />
+                  <span className="text-sm text-gray-600">Click on an earnings event for details</span>
+                </div>
               </div>
-              <div className="flex items-center space-x-1">
-                <div className="w-3 h-3 rounded-full bg-purple-500"></div>
-                <span className="text-sm">After Market</span>
-              </div>
-              <div className="flex items-center space-x-1">
-                <div className="w-3 h-3 rounded-full bg-amber-500"></div>
-                <span className="text-sm">During Market</span>
-              </div>
-              <div className="flex items-center space-x-1 ml-4">
-                <Info className="h-4 w-4 text-gray-500" />
-                <span className="text-sm text-gray-600">Click on an earnings event for details</span>
+              
+              {/* Sort options */}
+              <div className="flex items-center space-x-2">
+                <span className="text-sm text-gray-600">Sort by:</span>
+                <select 
+                  value={sortOption}
+                  onChange={(e) => setSortOption(e.target.value as 'date' | 'created')}
+                  className="text-sm border rounded p-1"
+                >
+                  <option value="date">Date (chronological)</option>
+                  <option value="created">Created (newest first)</option>
+                </select>
               </div>
             </div>
           </header>
@@ -1045,22 +1141,54 @@ export default function CalendarPage() {
                     />
                   </div>
                   
+                  {/* Display creation timestamp if available */}
+                  {newEvent.id && newEvent.createdAt && (
+                    <div className="mb-4 text-xs text-gray-500">
+                      Created: {new Date(newEvent.createdAt).toLocaleString()}
+                    </div>
+                  )}
+                  
                   {/* Summary content field for summary notes or transcripts */}
-                  {(newEvent.summaryContent || (newEvent.color === '#10b981' && newEvent.title?.includes('Earnings Summary'))) && (
+                  {(newEvent.summaryContent || (newEvent.color === '#10b981' && newEvent.title?.includes('Earnings Summary')) || newEvent.eventUrl) && (
                     <div className="mb-4">
                       <label className="block text-sm font-medium mb-1">
-                        {newEvent.eventUrl?.includes('youtube.com') ? 'Video Transcript' : 'Summary Content'}
+                        {newEvent.eventUrl?.includes('youtube.com') ? 'Video Transcript' : 
+                         newEvent.summaryContent ? 'Content from URL' : 'Content'}
                       </label>
                       <textarea
                         name="summaryContent"
                         value={newEvent.summaryContent || ''}
                         onChange={(e) => setNewEvent({...newEvent, summaryContent: e.target.value})}
                         className="w-full p-2 border rounded h-40 resize-none"
-                        placeholder="Summary content"
+                        placeholder={newEvent.eventUrl?.includes('youtube.com') 
+                          ? "Click Extract to get the video transcript or enter manually" 
+                          : newEvent.eventUrl 
+                            ? "Click Extract to get the page content or enter manually" 
+                            : "Enter content"}
                         disabled={loading}
                       />
                     </div>
                   )}
+                  
+                  {/* Notes field for user's own notes */}
+                  <div className="mb-4">
+                    <label className="block text-sm font-medium mb-1">
+                      Notes
+                      {newEvent.summaryContent && (
+                        <span className="text-xs text-gray-500 ml-2">
+                          (Your personal notes about the content)
+                        </span>
+                      )}
+                    </label>
+                    <textarea
+                      name="notes"
+                      value={newEvent.notes || ''}
+                      onChange={(e) => setNewEvent({...newEvent, notes: e.target.value})}
+                      className="w-full p-2 border rounded h-32 resize-none"
+                      placeholder="Add your personal notes here..."
+                      disabled={loading}
+                    />
+                  </div>
                   
                   <div className="mb-4">
                     <label className="block text-sm font-medium mb-1">Start Date</label>
@@ -1100,13 +1228,32 @@ export default function CalendarPage() {
                       />
                       <button
                         onClick={extractContentFromUrl}
-                        className="px-2 py-2 bg-blue-50 text-blue-600 rounded hover:bg-blue-100 transition-colors disabled:opacity-50"
+                        className="px-3 py-2 bg-blue-50 text-blue-600 rounded hover:bg-blue-100 transition-colors disabled:opacity-50 flex items-center"
                         disabled={loading || !newEvent.eventUrl}
                         title="Extract content from URL"
                       >
-                        <ExternalLink className="h-5 w-5" />
+                        {loading ? (
+                          <><Loader2 className="h-5 w-5 animate-spin mr-2" /> Loading...</>
+                        ) : (
+                          <><ExternalLink className="h-5 w-5 mr-2" /> Extract</>
+                        )}
                       </button>
                     </div>
+                    
+                    {extractSuccess && (
+                      <div className="mt-2 p-2 bg-green-50 text-green-700 text-sm rounded border border-green-100">
+                        <div className="flex items-center">
+                          <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1" viewBox="0 0 20 20" fill="currentColor">
+                            <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                          </svg>
+                          {extractSuccess}
+                        </div>
+                      </div>
+                    )}
+                    
+                    <p className="text-xs text-gray-500 mt-1">
+                      Enter a URL and click the Extract button to automatically get content, or add content manually below
+                    </p>
                     {newEvent.eventUrl && (
                       <a 
                         href={newEvent.eventUrl} 

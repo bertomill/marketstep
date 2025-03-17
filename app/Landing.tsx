@@ -98,7 +98,7 @@ export default function Landing() {
               <div className="space-y-2">
                 <h2 className="text-3xl font-bold tracking-tighter md:text-4xl">Ready to get started?</h2>
                 <p className="max-w-[600px] text-muted-foreground md:text-xl">
-                  Join thousands of investors who use MarketStep daily.
+                  Join our community of investors who use MarketStep daily.
                 </p>
               </div>
               <div className="mx-auto w-full max-w-sm space-y-2">

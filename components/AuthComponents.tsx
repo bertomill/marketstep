@@ -1,7 +1,6 @@
 'use client'
 
 import { useState } from 'react'
-import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -14,7 +13,6 @@ import { X } from 'lucide-react'
 // This is the login/signup dialog component
 // It shows a popup with tabs for login and signup
 export function LoginSignupDialog({ buttonText = "Login / Sign Up" }: { buttonText?: string }) {
-  const router = useRouter()
   const [isOpen, setIsOpen] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const { signInWithEmail, signUpWithEmail, signInWithGoogle } = useAuth()
@@ -34,7 +32,6 @@ export function LoginSignupDialog({ buttonText = "Login / Sign Up" }: { buttonTe
     try {
       await signInWithEmail(loginEmail, loginPassword)
       setIsOpen(false) // Close dialog on success
-      router.push('/my-companies') // Redirect to my-companies page after login
     } catch (err: Error | unknown) {
       const error = err as Error
       setError(error.message || 'Failed to login')
@@ -49,7 +46,6 @@ export function LoginSignupDialog({ buttonText = "Login / Sign Up" }: { buttonTe
     try {
       await signUpWithEmail(signupEmail, signupPassword)
       setIsOpen(false) // Close dialog on success
-      router.push('/my-companies') // Redirect to my-companies page after signup
     } catch (err: Error | unknown) {
       const error = err as Error
       setError(error.message || 'Failed to sign up')
@@ -63,7 +59,6 @@ export function LoginSignupDialog({ buttonText = "Login / Sign Up" }: { buttonTe
     try {
       await signInWithGoogle()
       setIsOpen(false) // Close dialog on success
-      router.push('/my-companies') // Redirect to my-companies page after Google sign in
     } catch (err: Error | unknown) {
       const error = err as Error
       setError(error.message || 'Failed to sign in with Google')
