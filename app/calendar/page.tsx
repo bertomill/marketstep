@@ -780,7 +780,6 @@ export default function CalendarPage() {
         setNewEvent({
           ...newEvent,
           title: data.title || newEvent.title,
-          color: '#10b981', // Green color for summary-type content
           summaryContent: data.transcriptText
         });
         
@@ -1046,10 +1045,12 @@ export default function CalendarPage() {
                     />
                   </div>
                   
-                  {/* Summary content field for summary notes */}
-                  {newEvent.color === '#10b981' && newEvent.title?.includes('Earnings Summary') && (
+                  {/* Summary content field for summary notes or transcripts */}
+                  {(newEvent.summaryContent || (newEvent.color === '#10b981' && newEvent.title?.includes('Earnings Summary'))) && (
                     <div className="mb-4">
-                      <label className="block text-sm font-medium mb-1">Summary Content</label>
+                      <label className="block text-sm font-medium mb-1">
+                        {newEvent.eventUrl?.includes('youtube.com') ? 'Video Transcript' : 'Summary Content'}
+                      </label>
                       <textarea
                         name="summaryContent"
                         value={newEvent.summaryContent || ''}
