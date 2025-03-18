@@ -1,13 +1,14 @@
 'use client';
 
-import { Thread } from "@/components/assistant-ui/thread";
 import { Sidebar } from "../components/Sidebar";
 import { useAuth } from "@/lib/auth";
 import { useEffect, useState } from "react";
 import { AssistantRuntimeProvider } from "@assistant-ui/react";
 import { useChatRuntime } from "@assistant-ui/react-ai-sdk";
 import { db } from '@/lib/firebase';
-import { doc, getDoc } from 'firebase/firestore';
+import { doc, getDoc, collection, query, where, getDocs, orderBy } from 'firebase/firestore';
+import { ChatThread } from "@/components/chat/ChatThread";
+import { Note } from "@/types/note";
 
 interface UserPreferences {
   occupation: string;
@@ -20,6 +21,7 @@ export default function ChatPage() {
   const { user } = useAuth();
   const [mounted, setMounted] = useState(false);
   const [userPreferences, setUserPreferences] = useState<UserPreferences | null>(null);
+  const [notes, setNotes] = useState<Note[]>([]);
 
   useEffect(() => {
     setMounted(true);
@@ -50,14 +52,44 @@ export default function ChatPage() {
     }
   }, [user]);
 
+  // Load notes when component mounts
+  useEffect(() => {
+    async function loadNotes() {
+      if (!user) return;
+      
+      try {
+        const q = query(
+          collection(db, 'notes'),
+          where('userId', '==', user.uid),
+          orderBy('createdAt', 'desc')
+        );
+        
+        const querySnapshot = await getDocs(q);
+        const loadedNotes: Note[] = [];
+        
+        querySnapshot.forEach((doc) => {
+          loadedNotes.push({ id: doc.id, ...doc.data() } as Note);
+        });
+        
+        setNotes(loadedNotes);
+      } catch (error) {
+        console.error('Error loading notes:', error);
+      }
+    }
+
+    loadNotes();
+  }, [user]);
+
   const runtime = useChatRuntime({
     api: "/api/chat",
     body: {
       userContext: mounted && user && userPreferences ? {
         displayName: user.displayName,
         email: user.email,
+        uid: user.uid,
         occupation: userPreferences.occupation,
-        bio: userPreferences.bio
+        bio: userPreferences.bio,
+        notes: notes
       } : undefined
     }
   });
@@ -68,7 +100,7 @@ export default function ChatPage() {
       <main className="ml-64 flex-1">
         <div className="h-[calc(100vh-3.5rem)]">
           <AssistantRuntimeProvider runtime={runtime}>
-            <Thread />
+            <ChatThread notes={notes} />
           </AssistantRuntimeProvider>
         </div>
       </main>
