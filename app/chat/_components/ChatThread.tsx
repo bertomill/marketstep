@@ -18,6 +18,7 @@ import {
   FileText,
   X,
   Tag,
+  Sparkles,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useState } from 'react';
@@ -26,12 +27,21 @@ import { MarkdownText } from "@/components/assistant-ui/markdown-text";
 import { TooltipIconButton } from "@/components/assistant-ui/tooltip-icon-button";
 import { Card } from "@/components/ui/card";
 import { Note } from "@/types/note";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 interface ChatThreadProps {
   notes: Note[];
+  selectedModel: 'claude' | 'gemini';
+  onModelChange: (model: 'claude' | 'gemini') => void;
 }
 
-export const ChatThread: FC<ChatThreadProps> = ({ notes }) => {
+export const ChatThread: FC<ChatThreadProps> = ({ notes, selectedModel, onModelChange }) => {
   const [showNoteSelector, setShowNoteSelector] = useState(false);
   const [selectedNoteIds, setSelectedNoteIds] = useState<string[]>([]);
   const [currentMessage, setCurrentMessage] = useState('');
@@ -81,7 +91,7 @@ export const ChatThread: FC<ChatThreadProps> = ({ notes }) => {
     <ThreadPrimitive.Root
       className="bg-background box-border flex h-full flex-col overflow-hidden"
       style={{
-        ["--thread-max-width" as string]: "42rem",
+        ["--thread-max-width" as string]: "80rem",
       }}
     >
       <ThreadPrimitive.Viewport className="flex h-full flex-col items-center overflow-y-scroll scroll-smooth bg-inherit px-4 pt-8">
@@ -175,32 +185,49 @@ export const ChatThread: FC<ChatThreadProps> = ({ notes }) => {
             )}
             <div className="flex flex-col w-full">
               <ComposerPrimitive.Root className="focus-within:border-ring/20 flex w-full flex-wrap items-end rounded-lg border bg-inherit px-2.5 shadow-sm transition-colors ease-in">
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="my-2"
-                  onClick={() => setShowNoteSelector(true)}
-                >
-                  <FileText className="h-4 w-4 mr-2" />
-                  Add Notes
-                </Button>
-                <ComposerPrimitive.Input
-                  rows={1}
-                  autoFocus
-                  value={currentMessage}
-                  onChange={(e) => setCurrentMessage(e.target.value)}
-                  placeholder="Write a message..."
-                  className="placeholder:text-muted-foreground max-h-40 flex-grow resize-none border-none bg-transparent px-2 py-4 text-sm outline-none focus:ring-0 disabled:cursor-not-allowed"
-                />
-                <ComposerPrimitive.Send asChild>
-                  <TooltipIconButton
-                    tooltip="Send"
-                    variant="default"
-                    className="my-2.5 size-8 p-2 transition-opacity ease-in"
+                <div className="flex w-full items-center gap-2">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="my-2 flex-shrink-0"
+                    onClick={() => setShowNoteSelector(true)}
                   >
-                    <SendHorizontalIcon />
-                  </TooltipIconButton>
-                </ComposerPrimitive.Send>
+                    <FileText className="h-4 w-4 mr-2" />
+                    Add Notes
+                  </Button>
+                  <ComposerPrimitive.Input
+                    rows={1}
+                    autoFocus
+                    value={currentMessage}
+                    onChange={(e) => setCurrentMessage(e.target.value)}
+                    placeholder="Write a message..."
+                    className="placeholder:text-muted-foreground flex-1 resize-none border-none bg-transparent px-2 py-4 text-sm outline-none focus:ring-0 disabled:cursor-not-allowed min-w-0"
+                  />
+                  <div className="flex items-center gap-2 flex-shrink-0">
+                    <Select value={selectedModel} onValueChange={onModelChange}>
+                      <SelectTrigger className="w-[120px] h-8 my-2 border-none bg-transparent text-sm">
+                        <div className="flex items-center">
+                          <Sparkles className="h-3.5 w-3.5 mr-1.5 flex-shrink-0" />
+                          <SelectValue className="truncate" />
+                        </div>
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="claude" className="text-sm">Claude</SelectItem>
+                        <SelectItem value="gemini" className="text-sm">Gemini</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <ComposerPrimitive.Send asChild>
+                      <TooltipIconButton
+                        tooltip="Send"
+                        variant="default"
+                        className="my-2.5 size-8 p-2 transition-opacity ease-in"
+                        onClick={() => setCurrentMessage('')}
+                      >
+                        <SendHorizontalIcon />
+                      </TooltipIconButton>
+                    </ComposerPrimitive.Send>
+                  </div>
+                </div>
               </ComposerPrimitive.Root>
             </div>
           </div>
@@ -244,22 +271,32 @@ const ThreadWelcomeSuggestions: FC = () => {
     <div className="mt-3 flex w-full items-stretch justify-center gap-4">
       <ThreadPrimitive.Suggestion
         className="hover:bg-muted/80 flex max-w-sm grow basis-0 flex-col items-center justify-center rounded-lg border p-3 transition-colors ease-in"
-        prompt="What is the weather in Tokyo?"
+        prompt="Summarize my recent notes and highlight key insights"
         method="replace"
         autoSend
       >
-        <span className="line-clamp-2 text-ellipsis text-sm font-semibold">
-          What is the weather in Tokyo?
+        <span className="line-clamp-2 text-ellipsis text-sm font-semibold text-center">
+          Summarize my recent notes and highlight key insights
         </span>
       </ThreadPrimitive.Suggestion>
       <ThreadPrimitive.Suggestion
         className="hover:bg-muted/80 flex max-w-sm grow basis-0 flex-col items-center justify-center rounded-lg border p-3 transition-colors ease-in"
-        prompt="What is assistant-ui?"
+        prompt="What events do I have coming up on my calendar?"
         method="replace"
         autoSend
       >
-        <span className="line-clamp-2 text-ellipsis text-sm font-semibold">
-          What is assistant-ui?
+        <span className="line-clamp-2 text-ellipsis text-sm font-semibold text-center">
+          What events do I have coming up on my calendar?
+        </span>
+      </ThreadPrimitive.Suggestion>
+      <ThreadPrimitive.Suggestion
+        className="hover:bg-muted/80 flex max-w-sm grow basis-0 flex-col items-center justify-center rounded-lg border p-3 transition-colors ease-in"
+        prompt="Help me analyze recent market trends in my tracked companies"
+        method="replace"
+        autoSend
+      >
+        <span className="line-clamp-2 text-ellipsis text-sm font-semibold text-center">
+          Analyze market trends in my tracked companies
         </span>
       </ThreadPrimitive.Suggestion>
     </div>
