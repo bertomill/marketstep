@@ -70,7 +70,17 @@ export function Sidebar() {
       {/* Header */}
       <div className="flex h-14 items-center border-b px-4">
         <Link href="/" className="flex items-center gap-2 font-semibold">
-          <Star className="h-6 w-6" />
+          <svg width="24" height="24" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg" className="h-6 w-6">
+            <circle cx="16" cy="16" r="15" className="fill-primary" />
+            <path d="M8 24L12 20L16 24L20 20L24 24" 
+                  stroke="white" 
+                  strokeWidth="3" 
+                  strokeLinecap="round" 
+                  strokeLinejoin="round"/>
+            <circle cx="12" cy="20" r="2" fill="white"/>
+            <circle cx="16" cy="24" r="2" fill="white"/>
+            <circle cx="20" cy="20" r="2" fill="white"/>
+          </svg>
           <span>MarketStep</span>
         </Link>
       </div>

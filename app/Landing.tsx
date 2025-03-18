@@ -5,7 +5,7 @@ import { ArrowRight, CheckCircle } from "lucide-react"
 import { LoginSignupDialog } from "@/components/AuthComponents"
 import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
-import { InteractiveGridPattern } from "@/components/magicui/interactive-grid-pattern"
+import { CalendarGridPattern } from "@/components/magicui/CalendarGridPattern"
 
 // This is the landing page that shows when users are not logged in
 // It has marketing content and login/signup options
@@ -13,7 +13,40 @@ export default function Landing() {
   return (
     <div className="flex min-h-[100dvh] flex-col">
       <header className="px-4 lg:px-6 h-14 flex items-center">
-        <Link className="flex items-center justify-center" href="#">
+        <Link className="flex items-center justify-center gap-2" href="#">
+          <div className="relative">
+            <svg 
+              width="32" 
+              height="32" 
+              viewBox="0 0 32 32" 
+              fill="none" 
+              xmlns="http://www.w3.org/2000/svg" 
+              className="animate-pulse"
+            >
+              <circle cx="16" cy="16" r="15" className="fill-primary/20" />
+            </svg>
+            <svg 
+              width="32" 
+              height="32" 
+              viewBox="0 0 32 32" 
+              fill="none" 
+              xmlns="http://www.w3.org/2000/svg" 
+              className="absolute top-0 left-0"
+            >
+              <circle cx="16" cy="16" r="15" className="fill-primary" />
+              <path 
+                d="M8 24L12 20L16 24L20 20L24 24" 
+                stroke="white" 
+                strokeWidth="3" 
+                strokeLinecap="round" 
+                strokeLinejoin="round"
+                className="animate-draw"
+              />
+              <circle cx="12" cy="20" r="2" fill="white" className="animate-fadeIn"/>
+              <circle cx="16" cy="24" r="2" fill="white" className="animate-fadeIn delay-100"/>
+              <circle cx="20" cy="20" r="2" fill="white" className="animate-fadeIn delay-200"/>
+            </svg>
+          </div>
           <span className="font-bold text-xl">MarketStep</span>
           <span className="sr-only">MarketStep</span>
         </Link>
@@ -59,9 +92,9 @@ export default function Landing() {
                 </div>
               </div>
               <div className="relative h-[500px] flex items-center justify-center">
-                <InteractiveGridPattern
+                <CalendarGridPattern
                   className={cn(
-                    "[mask-image:radial-gradient(400px_circle_at_center,white,transparent)]",
+                    "[mask-image:radial-gradient(600px_circle_at_center,white,transparent)]",
                     "inset-x-0 inset-y-[-30%] h-[200%] skew-y-12",
                   )}
                 />
@@ -119,6 +152,45 @@ export default function Landing() {
           </Link>
         </nav>
       </footer>
+      <style jsx global>{`
+        @keyframes draw {
+          from {
+            stroke-dashoffset: 100;
+          }
+          to {
+            stroke-dashoffset: 0;
+          }
+        }
+        
+        @keyframes fadeIn {
+          from {
+            opacity: 0;
+            transform: scale(0);
+          }
+          to {
+            opacity: 1;
+            transform: scale(1);
+          }
+        }
+        
+        .animate-draw {
+          stroke-dasharray: 100;
+          animation: draw 1.5s ease-out forwards;
+        }
+        
+        .animate-fadeIn {
+          opacity: 0;
+          animation: fadeIn 0.5s ease-out forwards 1s;
+        }
+        
+        .delay-100 {
+          animation-delay: 1.2s;
+        }
+        
+        .delay-200 {
+          animation-delay: 1.4s;
+        }
+      `}</style>
     </div>
   )
 }
