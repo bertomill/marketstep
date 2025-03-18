@@ -7,7 +7,7 @@ import { AssistantRuntimeProvider } from "@assistant-ui/react";
 import { useChatRuntime } from "@assistant-ui/react-ai-sdk";
 import { db } from '@/lib/firebase';
 import { doc, getDoc, collection, query, where, getDocs, orderBy } from 'firebase/firestore';
-import { ChatThread } from "@/components/chat/ChatThread";
+import { ChatThread } from "./_components/ChatThread";
 import { Note } from "@/types/note";
 
 interface UserPreferences {
