@@ -4,6 +4,7 @@ import "./globals.css";
 import { AuthProvider } from "@/lib/auth";
 import { Providers } from "./providers";
 import { Toaster } from "@/components/ui/sonner"
+import { MyRuntimeProvider } from './MyRuntimeProvider';
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -42,7 +43,9 @@ export default function RootLayout({
       >
         <AuthProvider>
           <Providers>
-            {children}
+            <MyRuntimeProvider>
+              {children}
+            </MyRuntimeProvider>
           </Providers>
         </AuthProvider>
         <Toaster />
