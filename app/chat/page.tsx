@@ -22,6 +22,7 @@ export default function ChatPage() {
   const [mounted, setMounted] = useState(false);
   const [userPreferences, setUserPreferences] = useState<UserPreferences | null>(null);
   const [notes, setNotes] = useState<Note[]>([]);
+  const [selectedModel, setSelectedModel] = useState<'claude' | 'gemini'>('claude');
 
   useEffect(() => {
     setMounted(true);
@@ -100,7 +101,11 @@ export default function ChatPage() {
       <main className="ml-64 flex-1">
         <div className="h-[calc(100vh-3.5rem)]">
           <AssistantRuntimeProvider runtime={runtime}>
-            <ChatThread notes={notes} />
+            <ChatThread 
+              notes={notes} 
+              selectedModel={selectedModel}
+              onModelChange={setSelectedModel}
+            />
           </AssistantRuntimeProvider>
         </div>
       </main>

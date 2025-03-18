@@ -19,6 +19,7 @@ import { useRouter } from 'next/navigation'
 export function Sidebar() {
   const { user, logout } = useAuth()
   const [mounted, setMounted] = useState(false)
+  const [isCollapsed, setIsCollapsed] = useState(false)
   const router = useRouter()
 
   useEffect(() => {
@@ -66,10 +67,10 @@ export function Sidebar() {
   }
 
   return (
-    <nav className="fixed top-0 left-0 h-screen w-64 flex flex-col border-r bg-background">
+    <nav className={`fixed top-0 left-0 h-screen flex flex-col border-r bg-background transition-all duration-300 ${isCollapsed ? 'w-16' : 'w-64'}`}>
       {/* Header */}
-      <div className="flex h-14 items-center border-b px-4">
-        <Link href="/" className="flex items-center gap-2 font-semibold">
+      <div className="flex h-14 items-center border-b px-4 justify-between">
+        <Link href="/" className={`flex items-center gap-2 font-semibold ${isCollapsed ? 'hidden' : ''}`}>
           <svg width="24" height="24" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg" className="h-6 w-6">
             <circle cx="16" cy="16" r="15" className="fill-primary" />
             <path d="M8 24L12 20L16 24L20 20L24 24" 
@@ -83,49 +84,72 @@ export function Sidebar() {
           </svg>
           <span>MarketStep</span>
         </Link>
+        <Button 
+          variant="ghost" 
+          size="icon"
+          onClick={() => setIsCollapsed(!isCollapsed)}
+          className="h-8 w-8"
+        >
+          <svg 
+            xmlns="http://www.w3.org/2000/svg" 
+            width="20" 
+            height="20" 
+            viewBox="0 0 24 24" 
+            fill="none" 
+            stroke="currentColor" 
+            strokeWidth="2" 
+            strokeLinecap="round" 
+            strokeLinejoin="round"
+          >
+            <rect width="18" height="18" x="3" y="3" rx="2"/>
+            <path d="M9 3v18"/>
+          </svg>
+        </Button>
       </div>
 
       {/* Main Navigation */}
       <ScrollArea className="flex-1">
         <div className="space-y-1 p-2">
-          <Button variant="ghost" className="w-full justify-start" asChild>
+          <Button variant="ghost" className={`w-full justify-start ${isCollapsed ? 'px-2' : ''}`} asChild>
             <Link href="/calendar">
-              <CalendarIcon className="mr-2 h-4 w-4" />
-              Calendar
+              <CalendarIcon className={`${isCollapsed ? 'mx-auto' : 'mr-2'} h-4 w-4`} />
+              {!isCollapsed && <span>Calendar</span>}
             </Link>
           </Button>
-          <Button variant="ghost" className="w-full justify-start" asChild>
+          <Button variant="ghost" className={`w-full justify-start ${isCollapsed ? 'px-2' : ''}`} asChild>
             <Link href="/studio">
-              <PenToolIcon className="mr-2 h-4 w-4" />
-              Content Studio
+              <PenToolIcon className={`${isCollapsed ? 'mx-auto' : 'mr-2'} h-4 w-4`} />
+              {!isCollapsed && <span>Content Studio</span>}
             </Link>
           </Button>
-          <Button variant="ghost" className="w-full justify-start" asChild>
+          <Button variant="ghost" className={`w-full justify-start ${isCollapsed ? 'px-2' : ''}`} asChild>
             <Link href="/chat">
-              <MessageSquareIcon className="mr-2 h-4 w-4" />
-              Chat
+              <MessageSquareIcon className={`${isCollapsed ? 'mx-auto' : 'mr-2'} h-4 w-4`} />
+              {!isCollapsed && <span>Chat</span>}
             </Link>
           </Button>
-          <Button variant="ghost" className="w-full justify-start">
-            <ListIcon className="mr-2 h-4 w-4" />
-            Tasks
+          <Button variant="ghost" className={`w-full justify-start ${isCollapsed ? 'px-2' : ''}`} asChild>
+            <Link href="/notes">
+              <FileTextIcon className={`${isCollapsed ? 'mx-auto' : 'mr-2'} h-4 w-4`} />
+              {!isCollapsed && <span>Notes</span>}
+            </Link>
           </Button>
-          <Button variant="ghost" className="w-full justify-start" asChild>
+          <Button variant="ghost" className={`w-full justify-start ${isCollapsed ? 'px-2' : ''}`} asChild>
             <Link href="/sec-filings">
-              <FileTextIcon className="mr-2 h-4 w-4" />
-              SEC Filings
+              <FileTextIcon className={`${isCollapsed ? 'mx-auto' : 'mr-2'} h-4 w-4`} />
+              {!isCollapsed && <span>SEC Filings</span>}
             </Link>
           </Button>
-          <Button variant="ghost" className="w-full justify-start" asChild>
+          <Button variant="ghost" className={`w-full justify-start ${isCollapsed ? 'px-2' : ''}`} asChild>
             <Link href="/my-companies">
-              <Star className="mr-2 h-4 w-4" />
-              My Companies
+              <Star className={`${isCollapsed ? 'mx-auto' : 'mr-2'} h-4 w-4`} />
+              {!isCollapsed && <span>My Companies</span>}
             </Link>
           </Button>
-          <Button variant="ghost" className="w-full justify-start" asChild>
+          <Button variant="ghost" className={`w-full justify-start ${isCollapsed ? 'px-2' : ''}`} asChild>
             <Link href="/settings">
-              <SettingsIcon className="mr-2 h-4 w-4" />
-              Settings
+              <SettingsIcon className={`${isCollapsed ? 'mx-auto' : 'mr-2'} h-4 w-4`} />
+              {!isCollapsed && <span>Settings</span>}
             </Link>
           </Button>
         </div>
@@ -136,9 +160,9 @@ export function Sidebar() {
         <div className="flex flex-col gap-2 p-4">
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="ghost" className="w-full justify-start">
-                <UserIcon className="mr-2 h-4 w-4" />
-                {user?.displayName || 'Profile'}
+              <Button variant="ghost" className={`w-full justify-start ${isCollapsed ? 'px-2' : ''}`}>
+                <UserIcon className={`${isCollapsed ? 'mx-auto' : 'mr-2'} h-4 w-4`} />
+                {!isCollapsed && (user?.displayName || 'Profile')}
               </Button>
             </DropdownMenuTrigger>
             {renderDropdownContent()}
@@ -188,28 +212,6 @@ const PenToolIcon = (props: React.SVGProps<SVGSVGElement>) => (
     <path d="m18 13-1.5-7.5L2 2l3.5 14.5L13 18l5-5z" />
     <path d="m2 2 7.586 7.586" />
     <circle cx="11" cy="11" r="2" />
-  </svg>
-)
-
-const ListIcon = (props: React.SVGProps<SVGSVGElement>) => (
-  <svg
-    {...props}
-    xmlns="http://www.w3.org/2000/svg"
-    width="24"
-    height="24"
-    viewBox="0 0 24 24"
-    fill="none"
-    stroke="currentColor"
-    strokeWidth="2"
-    strokeLinecap="round"
-    strokeLinejoin="round"
-  >
-    <line x1="8" y1="6" x2="21" y2="6" />
-    <line x1="8" y1="12" x2="21" y2="12" />
-    <line x1="8" y1="18" x2="21" y2="18" />
-    <line x1="3" y1="6" x2="3.01" y2="6" />
-    <line x1="3" y1="12" x2="3.01" y2="12" />
-    <line x1="3" y1="18" x2="3.01" y2="18" />
   </svg>
 )
 

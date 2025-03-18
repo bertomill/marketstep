@@ -44,7 +44,9 @@ export default function RootLayout({
         <AuthProvider>
           <Providers>
             <MyRuntimeProvider>
-              {children}
+              <div className="flex min-h-screen">
+                {children}
+              </div>
             </MyRuntimeProvider>
           </Providers>
         </AuthProvider>
