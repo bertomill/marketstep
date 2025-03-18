@@ -11,6 +11,8 @@ import { Loader2, Calendar, FileText, Star } from 'lucide-react'
 import { Card, CardContent, CardFooter, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import Link from 'next/link'
+import { MagicCard } from '@/components/magicui/magic-card'
+import { useTheme } from 'next-themes'
 
 // This is the main page of the app
 // It shows the landing page for unauthenticated users
@@ -20,6 +22,17 @@ export default function Home() {
   const { user, loading } = useAuth()
   const [hasCompletedOnboarding, setHasCompletedOnboarding] = useState<boolean | null>(null)
   const [checkingOnboarding, setCheckingOnboarding] = useState(false)
+  const { theme, systemTheme } = useTheme()
+  const [mounted, setMounted] = useState(false)
+  
+  // Mount effect to prevent hydration mismatch
+  useEffect(() => {
+    setMounted(true)
+  }, [])
+  
+  // Determine the current theme safely
+  const currentTheme = mounted ? (theme === 'system' ? systemTheme : theme) : 'light'
+  const gradientColor = currentTheme === 'dark' ? "#262626" : "#D9D9D955"
 
   // Check if the user has completed the onboarding process
   useEffect(() => {
@@ -84,82 +97,133 @@ export default function Home() {
             <p className="text-lg text-gray-600">Your financial market companion</p>
           </div>
           
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 max-w-6xl mx-auto">
-            {/* Calendar Card */}
-            <Card className="hover:shadow-md transition-shadow">
-              <CardHeader>
-                <CardTitle className="flex items-center">
-                  <Calendar className="mr-2 h-5 w-5 text-primary" />
-                  Calendar
-                </CardTitle>
-                <CardDescription>
-                  Track earnings calls and important market events
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <p className="text-sm text-gray-500">
-                  Stay organized with upcoming financial events and create your own custom reminders.
-                </p>
-              </CardContent>
-              <CardFooter>
-                <Button asChild className="w-full">
-                  <Link href="/calendar">
-                    View Calendar
-                  </Link>
-                </Button>
-              </CardFooter>
-            </Card>
+          {mounted && (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 max-w-6xl mx-auto">
+              {/* Calendar Card */}
+              <Card>
+                <MagicCard gradientColor={gradientColor} className="h-full">
+                  <CardHeader>
+                    <CardTitle className="flex items-center">
+                      <Calendar className="mr-2 h-5 w-5 text-primary" />
+                      Calendar
+                    </CardTitle>
+                    <CardDescription>
+                      Track earnings calls and important market events
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <p className="text-sm text-gray-500">
+                      Stay organized with upcoming financial events and create your own custom reminders.
+                    </p>
+                  </CardContent>
+                  <CardFooter>
+                    <Button asChild className="w-full">
+                      <Link href="/calendar">
+                        View Calendar
+                      </Link>
+                    </Button>
+                  </CardFooter>
+                </MagicCard>
+              </Card>
 
-            {/* SEC Filings Card */}
-            <Card className="hover:shadow-md transition-shadow">
-              <CardHeader>
-                <CardTitle className="flex items-center">
-                  <FileText className="mr-2 h-5 w-5 text-primary" />
-                  SEC Filings
-                </CardTitle>
-                <CardDescription>
-                  Access and analyze SEC documents
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <p className="text-sm text-gray-500">
-                  Search through recent filings and stay updated on company disclosures and financial reports.
-                </p>
-              </CardContent>
-              <CardFooter>
-                <Button asChild className="w-full">
-                  <Link href="/sec-filings">
-                    Browse Filings
-                  </Link>
-                </Button>
-              </CardFooter>
-            </Card>
+              {/* SEC Filings Card */}
+              <Card>
+                <MagicCard gradientColor={gradientColor} className="h-full">
+                  <CardHeader>
+                    <CardTitle className="flex items-center">
+                      <FileText className="mr-2 h-5 w-5 text-primary" />
+                      SEC Filings
+                    </CardTitle>
+                    <CardDescription>
+                      Access and analyze SEC documents
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <p className="text-sm text-gray-500">
+                      Search through recent filings and stay updated on company disclosures and financial reports.
+                    </p>
+                  </CardContent>
+                  <CardFooter>
+                    <Button asChild className="w-full">
+                      <Link href="/sec-filings">
+                        Browse Filings
+                      </Link>
+                    </Button>
+                  </CardFooter>
+                </MagicCard>
+              </Card>
 
-            {/* My Companies Card */}
-            <Card className="hover:shadow-md transition-shadow">
-              <CardHeader>
-                <CardTitle className="flex items-center">
-                  <Star className="mr-2 h-5 w-5 text-primary" />
-                  My Companies
-                </CardTitle>
-                <CardDescription>
-                  Manage your watchlist
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <p className="text-sm text-gray-500">
-                  Follow companies you&apos;re interested in to receive updates and track their performance.
-                </p>
-              </CardContent>
-              <CardFooter>
-                <Button asChild className="w-full">
-                  <Link href="/my-companies">
-                    View Companies
-                  </Link>
-                </Button>
-              </CardFooter>
-            </Card>
-          </div>
+              {/* My Companies Card */}
+              <Card>
+                <MagicCard gradientColor={gradientColor} className="h-full">
+                  <CardHeader>
+                    <CardTitle className="flex items-center">
+                      <Star className="mr-2 h-5 w-5 text-primary" />
+                      My Companies
+                    </CardTitle>
+                    <CardDescription>
+                      Manage your watchlist
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <p className="text-sm text-gray-500">
+                      Follow companies you&apos;re interested in to receive updates and track their performance.
+                    </p>
+                  </CardContent>
+                  <CardFooter>
+                    <Button asChild className="w-full">
+                      <Link href="/my-companies">
+                        View Companies
+                      </Link>
+                    </Button>
+                  </CardFooter>
+                </MagicCard>
+              </Card>
+              
+              {/* Studio Card */}
+              <Card>
+                <MagicCard gradientColor={gradientColor} className="h-full">
+                  <CardHeader>
+                    <CardTitle className="flex items-center">
+                      <svg
+                        className="mr-2 h-5 w-5 text-primary"
+                        xmlns="http://www.w3.org/2000/svg"
+                        width="24"
+                        height="24"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="2"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                      >
+                        <path d="m12 19 7-7 3 3-7 7-3-3z" />
+                        <path d="m18 13-1.5-7.5L2 2l3.5 14.5L13 18l5-5z" />
+                        <path d="m2 2 7.586 7.586" />
+                        <circle cx="11" cy="11" r="2" />
+                      </svg>
+                      Content Studio
+                    </CardTitle>
+                    <CardDescription>
+                      Create AI-powered content from your events
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <p className="text-sm text-gray-500">
+                      Use Gemini AI to transform your calendar events into polished documents and reports.
+                    </p>
+                  </CardContent>
+                  <CardFooter>
+                    <Button asChild className="w-full">
+                      <Link href="/studio">
+                        Open Studio
+                      </Link>
+                    </Button>
+                  </CardFooter>
+                </MagicCard>
+              </Card>
+            </div>
+          )}
         </div>
       </main>
     </div>

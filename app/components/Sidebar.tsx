@@ -1,38 +1,93 @@
 'use client'
 
 import { ScrollArea } from "@/components/ui/scroll-area"
-import { Separator } from "@/components/ui/separator"
 import { Button } from "@/components/ui/button"
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
 import Link from "next/link"
 import { useAuth } from "@/lib/auth"
-import { LogOut, Star } from "lucide-react"
+import { LogOut, Star, Settings } from "lucide-react"
+import { useState, useEffect } from "react"
+import { useRouter } from 'next/navigation'
 
 export function Sidebar() {
-  const { logout } = useAuth()
+  const { user, logout } = useAuth()
+  const [mounted, setMounted] = useState(false)
+  const router = useRouter()
 
-  // This function handles user logout
+  useEffect(() => {
+    setMounted(true)
+  }, [])
+
   const handleLogout = async () => {
     try {
       await logout()
+      router.push('/')
     } catch (error) {
       console.error('Logout error:', error)
     }
   }
 
+  const handlePreferences = () => {
+    router.push('/settings')
+  }
+
+  // Don't render dropdown content until client-side
+  const renderDropdownContent = () => {
+    if (!mounted || !user) return null
+
+    return (
+      <DropdownMenuContent className="w-56" align="end" side="right">
+        <DropdownMenuLabel className="flex items-center gap-2">
+          <UserIcon className="h-4 w-4" />
+          <div className="flex flex-col space-y-1">
+            <p className="text-sm font-medium leading-none">{user.displayName || 'User'}</p>
+            <p className="text-xs leading-none text-muted-foreground">{user.email}</p>
+          </div>
+        </DropdownMenuLabel>
+        <DropdownMenuSeparator />
+        <DropdownMenuItem onClick={handlePreferences}>
+          <Settings className="mr-2 h-4 w-4" />
+          <span>Preferences</span>
+        </DropdownMenuItem>
+        <DropdownMenuSeparator />
+        <DropdownMenuItem onClick={handleLogout}>
+          <LogOut className="mr-2 h-4 w-4" />
+          <span>Log out</span>
+        </DropdownMenuItem>
+      </DropdownMenuContent>
+    )
+  }
+
   return (
-    <div className="fixed top-0 left-0 h-screen w-64 flex flex-col border-r bg-white z-40">
-      <div className="p-4">
-        <Link href="/" className="inline-block">
-          <h2 className="text-lg font-semibold mb-4 hover:text-primary cursor-pointer">MarketStep</h2>
+    <nav className="fixed top-0 left-0 h-screen w-64 flex flex-col border-r bg-background">
+      {/* Header */}
+      <div className="flex h-14 items-center border-b px-4">
+        <Link href="/" className="flex items-center gap-2 font-semibold">
+          <Star className="h-6 w-6" />
+          <span>MarketStep</span>
         </Link>
-        <Separator className="my-2" />
       </div>
-      <ScrollArea className="flex-1 px-4">
-        <div className="space-y-2">
+
+      {/* Main Navigation */}
+      <ScrollArea className="flex-1">
+        <div className="space-y-1 p-2">
           <Button variant="ghost" className="w-full justify-start" asChild>
             <Link href="/calendar">
               <CalendarIcon className="mr-2 h-4 w-4" />
               Calendar
+            </Link>
+          </Button>
+          <Button variant="ghost" className="w-full justify-start" asChild>
+            <Link href="/studio">
+              <PenToolIcon className="mr-2 h-4 w-4" />
+              Content Studio
             </Link>
           </Button>
           <Button variant="ghost" className="w-full justify-start">
@@ -51,24 +106,30 @@ export function Sidebar() {
               My Companies
             </Link>
           </Button>
-          <Button variant="ghost" className="w-full justify-start">
-            <SettingsIcon className="mr-2 h-4 w-4" />
-            Settings
+          <Button variant="ghost" className="w-full justify-start" asChild>
+            <Link href="/settings">
+              <SettingsIcon className="mr-2 h-4 w-4" />
+              Settings
+            </Link>
           </Button>
         </div>
       </ScrollArea>
-      <Separator />
-      <div className="p-4 space-y-2">
-        <Button variant="outline" className="w-full">
-          <UserIcon className="mr-2 h-4 w-4" />
-          Profile
-        </Button>
-        <Button variant="outline" className="w-full" onClick={handleLogout}>
-          <LogOut className="mr-2 h-4 w-4" />
-          Logout
-        </Button>
+
+      {/* Footer */}
+      <div className="border-t">
+        <div className="flex flex-col gap-2 p-4">
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="ghost" className="w-full justify-start">
+                <UserIcon className="mr-2 h-4 w-4" />
+                {user?.displayName || 'Profile'}
+              </Button>
+            </DropdownMenuTrigger>
+            {renderDropdownContent()}
+          </DropdownMenu>
+        </div>
       </div>
-    </div>
+    </nav>
   )
 }
 
@@ -90,6 +151,27 @@ const CalendarIcon = (props: React.SVGProps<SVGSVGElement>) => (
     <line x1="16" x2="16" y1="2" y2="6" />
     <line x1="8" x2="8" y1="2" y2="6" />
     <line x1="3" x2="21" y1="10" y2="10" />
+  </svg>
+)
+
+// Add PenTool icon for Content Studio
+const PenToolIcon = (props: React.SVGProps<SVGSVGElement>) => (
+  <svg
+    {...props}
+    xmlns="http://www.w3.org/2000/svg"
+    width="24"
+    height="24"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="2"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+  >
+    <path d="m12 19 7-7 3 3-7 7-3-3z" />
+    <path d="m18 13-1.5-7.5L2 2l3.5 14.5L13 18l5-5z" />
+    <path d="m2 2 7.586 7.586" />
+    <circle cx="11" cy="11" r="2" />
   </svg>
 )
 
