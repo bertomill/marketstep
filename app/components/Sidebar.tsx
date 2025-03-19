@@ -17,7 +17,9 @@ import { useState, useEffect } from "react"
 import { useRouter } from 'next/navigation'
 import { MobileMenuToggle } from './MobileMenuToggle'
 
-export default function Sidebar() {
+// This is the main navigation sidebar component that appears on all pages
+// It provides access to different sections of the application and handles user authentication
+export function Sidebar() {
   const { user, logout } = useAuth()
   const [mounted, setMounted] = useState(false)
   const [isCollapsed, setIsCollapsed] = useState(false)

@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import finnhub from 'finnhub';
+import { ApiClient, DefaultApi } from 'finnhub';
 
 // This API route uses the Finnhub client to fetch stock quote data
 export async function GET(request: NextRequest) {
@@ -30,14 +30,14 @@ export async function GET(request: NextRequest) {
     console.log(`Finnhub stock data request: symbol=${symbol}`);
     
     // Initialize Finnhub client
-    const apiClient = finnhub.ApiClient.instance;
+    const apiClient = ApiClient.instance;
     const auth = apiClient.authentications['api_key'];
     auth.apiKey = apiKey;
-    const finnhubClient = new finnhub.DefaultApi();
+    const finnhubClient = new DefaultApi();
     
     // Get quote data from Finnhub
     const quoteData = await new Promise<finnhub.QuoteResponse>((resolve, reject) => {
-      finnhubClient.quote(symbol, (error, data, response) => {
+      finnhubClient.quote(symbol, (error, data) => {
         if (error) {
           console.error('Finnhub quote error:', error);
           reject(error);
