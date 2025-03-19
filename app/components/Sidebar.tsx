@@ -12,7 +12,7 @@ import {
 } from "@/components/ui/dropdown-menu"
 import Link from "next/link"
 import { useAuth } from "@/lib/auth"
-import { LogOut, Star, Settings } from "lucide-react"
+import { LogOut, Star, Settings, FileBarChart, BarChart3, BookOpen } from "lucide-react"
 import { useState, useEffect } from "react"
 import { useRouter } from 'next/navigation'
 
@@ -109,49 +109,75 @@ export function Sidebar() {
 
       {/* Main Navigation */}
       <ScrollArea className="flex-1">
-        <div className="space-y-1 p-2">
-          <Button variant="ghost" className={`w-full justify-start ${isCollapsed ? 'px-2' : ''}`} asChild>
-            <Link href="/calendar">
-              <CalendarIcon className={`${isCollapsed ? 'mx-auto' : 'mr-2'} h-4 w-4`} />
-              {!isCollapsed && <span>Calendar</span>}
-            </Link>
-          </Button>
-          <Button variant="ghost" className={`w-full justify-start ${isCollapsed ? 'px-2' : ''}`} asChild>
-            <Link href="/studio">
-              <PenToolIcon className={`${isCollapsed ? 'mx-auto' : 'mr-2'} h-4 w-4`} />
-              {!isCollapsed && <span>Content Studio</span>}
-            </Link>
-          </Button>
-          <Button variant="ghost" className={`w-full justify-start ${isCollapsed ? 'px-2' : ''}`} asChild>
-            <Link href="/chat">
-              <MessageSquareIcon className={`${isCollapsed ? 'mx-auto' : 'mr-2'} h-4 w-4`} />
-              {!isCollapsed && <span>Chat</span>}
-            </Link>
-          </Button>
-          <Button variant="ghost" className={`w-full justify-start ${isCollapsed ? 'px-2' : ''}`} asChild>
-            <Link href="/notes">
-              <FileTextIcon className={`${isCollapsed ? 'mx-auto' : 'mr-2'} h-4 w-4`} />
-              {!isCollapsed && <span>Notes</span>}
-            </Link>
-          </Button>
-          <Button variant="ghost" className={`w-full justify-start ${isCollapsed ? 'px-2' : ''}`} asChild>
-            <Link href="/sec-filings">
-              <FileTextIcon className={`${isCollapsed ? 'mx-auto' : 'mr-2'} h-4 w-4`} />
-              {!isCollapsed && <span>SEC Filings</span>}
-            </Link>
-          </Button>
-          <Button variant="ghost" className={`w-full justify-start ${isCollapsed ? 'px-2' : ''}`} asChild>
-            <Link href="/my-companies">
-              <Star className={`${isCollapsed ? 'mx-auto' : 'mr-2'} h-4 w-4`} />
-              {!isCollapsed && <span>My Companies</span>}
-            </Link>
-          </Button>
-          <Button variant="ghost" className={`w-full justify-start ${isCollapsed ? 'px-2' : ''}`} asChild>
-            <Link href="/settings">
-              <SettingsIcon className={`${isCollapsed ? 'mx-auto' : 'mr-2'} h-4 w-4`} />
-              {!isCollapsed && <span>Settings</span>}
-            </Link>
-          </Button>
+        <div className="space-y-4 p-2">
+          {/* Content Section */}
+          <div className="px-2 py-1">
+            <h2 className="mb-2 px-2 text-xs font-semibold tracking-tight">Content</h2>
+            <div className="space-y-1">
+              <Button variant="ghost" className={`w-full justify-start ${isCollapsed ? 'px-2' : ''}`} asChild>
+                <Link href="/calendar">
+                  <CalendarIcon className={`${isCollapsed ? 'mx-auto' : 'mr-2'} h-4 w-4`} />
+                  {!isCollapsed && <span>Calendar</span>}
+                </Link>
+              </Button>
+              <Button variant="ghost" className={`w-full justify-start ${isCollapsed ? 'px-2' : ''}`} asChild>
+                <Link href="/studio">
+                  <PenToolIcon className={`${isCollapsed ? 'mx-auto' : 'mr-2'} h-4 w-4`} />
+                  {!isCollapsed && <span>Content Studio</span>}
+                </Link>
+              </Button>
+              <Button variant="ghost" className={`w-full justify-start ${isCollapsed ? 'px-2' : ''}`} asChild>
+                <Link href="/chat">
+                  <MessageSquareIcon className={`${isCollapsed ? 'mx-auto' : 'mr-2'} h-4 w-4`} />
+                  {!isCollapsed && <span>Chat</span>}
+                </Link>
+              </Button>
+              <Button variant="ghost" className={`w-full justify-start ${isCollapsed ? 'px-2' : ''}`} asChild>
+                <Link href="/notes">
+                  <BookOpen className={`${isCollapsed ? 'mx-auto' : 'mr-2'} h-4 w-4`} />
+                  {!isCollapsed && <span>Notes</span>}
+                </Link>
+              </Button>
+            </div>
+          </div>
+
+          {/* Analysis Section */}
+          <div className="px-2 py-1">
+            <h2 className="mb-2 px-2 text-xs font-semibold tracking-tight">Analysis</h2>
+            <div className="space-y-1">
+              <Button variant="ghost" className={`w-full justify-start ${isCollapsed ? 'px-2' : ''}`} asChild>
+                <Link href="/sec-filings">
+                  <FileBarChart className={`${isCollapsed ? 'mx-auto' : 'mr-2'} h-4 w-4`} />
+                  {!isCollapsed && <span>SEC Filings</span>}
+                </Link>
+              </Button>
+              <Button variant="ghost" className={`w-full justify-start ${isCollapsed ? 'px-2' : ''}`} asChild>
+                <Link href="/insights">
+                  <BarChart3 className={`${isCollapsed ? 'mx-auto' : 'mr-2'} h-4 w-4`} />
+                  {!isCollapsed && <span>Machine Learning</span>}
+                </Link>
+              </Button>
+            </div>
+          </div>
+
+          {/* Settings Section */}
+          <div className="px-2 py-1">
+            <h2 className="mb-2 px-2 text-xs font-semibold tracking-tight">Personal</h2>
+            <div className="space-y-1">
+              <Button variant="ghost" className={`w-full justify-start ${isCollapsed ? 'px-2' : ''}`} asChild>
+                <Link href="/my-companies">
+                  <Star className={`${isCollapsed ? 'mx-auto' : 'mr-2'} h-4 w-4`} />
+                  {!isCollapsed && <span>My Companies</span>}
+                </Link>
+              </Button>
+              <Button variant="ghost" className={`w-full justify-start ${isCollapsed ? 'px-2' : ''}`} asChild>
+                <Link href="/settings">
+                  <SettingsIcon className={`${isCollapsed ? 'mx-auto' : 'mr-2'} h-4 w-4`} />
+                  {!isCollapsed && <span>Settings</span>}
+                </Link>
+              </Button>
+            </div>
+          </div>
         </div>
       </ScrollArea>
 
@@ -208,10 +234,10 @@ const PenToolIcon = (props: React.SVGProps<SVGSVGElement>) => (
     strokeLinecap="round"
     strokeLinejoin="round"
   >
-    <path d="m12 19 7-7 3 3-7 7-3-3z" />
-    <path d="m18 13-1.5-7.5L2 2l3.5 14.5L13 18l5-5z" />
-    <path d="m2 2 7.586 7.586" />
-    <circle cx="11" cy="11" r="2" />
+    <path d="M12 19l7-7 3 3-7 7-3-3z"/>
+    <path d="M18 13l-1.5-7.5L2 2l3.5 14.5L13 18l5-5z"/>
+    <path d="M2 2l7.586 7.586"/>
+    <circle cx="11" cy="11" r="2"/>
   </svg>
 )
 
@@ -228,11 +254,11 @@ const FileTextIcon = (props: React.SVGProps<SVGSVGElement>) => (
     strokeLinecap="round"
     strokeLinejoin="round"
   >
-    <path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z" />
-    <polyline points="14 2 14 8 20 8" />
-    <line x1="16" y1="13" x2="8" y2="13" />
-    <line x1="16" y1="17" x2="8" y2="17" />
-    <line x1="10" y1="9" x2="8" y2="9" />
+    <path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/>
+    <polyline points="14 2 14 8 20 8"/>
+    <line x1="16" y1="13" x2="8" y2="13"/>
+    <line x1="16" y1="17" x2="8" y2="17"/>
+    <line x1="10" y1="9" x2="8" y2="9"/>
   </svg>
 )
 
@@ -288,4 +314,4 @@ const MessageSquareIcon = (props: React.SVGProps<SVGSVGElement>) => (
   >
     <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
   </svg>
-) 
+)
