@@ -177,7 +177,7 @@ export function detectAnomalies(
     });
     
     return { anomalies: sortedAnomalies };
-  } catch (error) {
+  } catch (error: unknown) {
     console.error('Error detecting anomalies:', error);
     return { 
       anomalies: [],

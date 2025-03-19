@@ -4,15 +4,13 @@ import { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { PageHeader } from '../../components/PageHeader';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { AreaChart, AlertTriangle, TrendingUp, BarChart3, Info } from 'lucide-react';
+import { AreaChart, AlertTriangle, TrendingUp, BarChart3 } from 'lucide-react';
 import Link from 'next/link';
 import { Sidebar } from '../components/Sidebar';
 import { StockPredictionForm } from './components/StockPredictionForm';
 import { StockPredictionChart } from './components/StockPredictionChart';
 import { PredictionResult } from '../ml-service/stockPredictionService';
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { ScrollArea } from "@/components/ui/scroll-area"
-import { Button } from "@/components/ui/button"
 
 export default function MachineLearningInsightsPage() {
   const [activeTab, setActiveTab] = useState('overview');
