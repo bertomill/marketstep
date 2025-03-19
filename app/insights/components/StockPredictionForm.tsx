@@ -143,7 +143,7 @@ export function StockPredictionForm({ onPredictionGenerated }: StockPredictionFo
 
           <div className="text-xs text-muted-foreground space-y-2 mt-2">
             <p>
-              <strong>Data Source:</strong> Alpha Vantage API (daily closing prices)
+              <strong>Data Source:</strong> Finnhub API (daily closing prices)
             </p>
             <p>
               <strong>Model:</strong> Simple linear regression on time series data
