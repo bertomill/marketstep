@@ -3,7 +3,8 @@
 import { createContext, useContext, useEffect, useState } from 'react'
 import { 
   User,
-  GoogleAuthProvider, 
+  GoogleAuthProvider,
+  GithubAuthProvider, 
   signInWithEmailAndPassword, 
   createUserWithEmailAndPassword, 
   signInWithPopup, 
@@ -19,6 +20,7 @@ type AuthContextType = {
   signInWithEmail: (email: string, password: string) => Promise<void>
   signUpWithEmail: (email: string, password: string) => Promise<void>
   signInWithGoogle: () => Promise<void>
+  signInWithGithub: () => Promise<void>
   logout: () => Promise<void>
 }
 
@@ -29,6 +31,7 @@ const AuthContext = createContext<AuthContextType>({
   signInWithEmail: async () => {},
   signUpWithEmail: async () => {},
   signInWithGoogle: async () => {},
+  signInWithGithub: async () => {},
   logout: async () => {}
 })
 
@@ -83,6 +86,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   }
 
+  // Sign in with GitHub
+  const signInWithGithub = async () => {
+    try {
+      const provider = new GithubAuthProvider()
+      await signInWithPopup(auth, provider)
+    } catch (error) {
+      console.error('Error signing in with GitHub:', error)
+      throw error
+    }
+  }
+
   // Logout
   const logout = async () => {
     try {
@@ -100,6 +114,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     signInWithEmail,
     signUpWithEmail,
     signInWithGoogle,
+    signInWithGithub,
     logout
   }
 

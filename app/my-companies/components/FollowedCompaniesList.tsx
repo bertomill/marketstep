@@ -7,17 +7,26 @@ import { X, ExternalLink } from 'lucide-react';
 import Link from 'next/link';
 
 // This component displays a list of companies that the user is following
-// It allows users to unfollow companies
+// It allows users to unfollow companies and provides links to view SEC filings
+// The component is used in the "My Companies" section of the application
+
 type FollowedCompaniesListProps = {
-  companies: FollowedCompany[];
-  onUpdate: (companies: FollowedCompany[]) => void;
-  userId: string;
+  companies: FollowedCompany[];  // Array of followed companies
+  onUpdate: (companies: FollowedCompany[]) => void;  // Callback to update the parent component
+  userId: string;  // User's ID for API calls
 };
 
 export function FollowedCompaniesList({ companies, onUpdate, userId }: FollowedCompaniesListProps) {
+  // State to track which company is currently being unfollowed
   const [isLoading, setIsLoading] = useState<string | null>(null);
 
   // Handle unfollowing a company
+  // This function:
+  // 1. Sets loading state
+  // 2. Makes API call to unfollow company
+  // 3. Fetches updated list of followed companies
+  // 4. Updates parent component with new list
+  // 5. Handles errors and resets loading state
   const handleUnfollow = async (company: FollowedCompany) => {
     try {
       setIsLoading(company.ticker);
@@ -33,7 +42,8 @@ export function FollowedCompaniesList({ companies, onUpdate, userId }: FollowedC
     }
   };
 
-  // If no companies are being followed, show a message
+  // If no companies are being followed, show a helpful message
+  // This message guides users on how to add companies
   if (companies.length === 0) {
     return (
       <div className="text-center py-8 text-gray-500">
@@ -44,6 +54,11 @@ export function FollowedCompaniesList({ companies, onUpdate, userId }: FollowedC
   }
 
   // Display the list of followed companies
+  // Each company shows:
+  // - Ticker symbol
+  // - Company name
+  // - Link to SEC filings
+  // - Unfollow button with loading state
   return (
     <ul className="divide-y">
       {companies.map((company) => (
@@ -81,4 +96,4 @@ export function FollowedCompaniesList({ companies, onUpdate, userId }: FollowedC
       ))}
     </ul>
   );
-} 
+}
