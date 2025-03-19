@@ -18,6 +18,17 @@ export interface StudioDocument {
   userId: string;
   lastModified: Date;
   chatHistory: ChatMessage[];
+  // New fields for business context
+  companyName?: string;
+  industry?: string;
+  researchType?: 'competitor-analysis' | 'market-research' | 'earnings-summary' | 'company-profile' | 'industry-report';
+  tags: string[];
+  sources: Array<{
+    type: 'event' | 'filing' | 'news' | 'research';
+    id: string;
+    title: string;
+    date: Date;
+  }>;
 }
 
 /**
@@ -47,31 +58,51 @@ export async function generateContent(
       // Extract notes and additional metadata if available
       const notes = event.metadata?.notes || '';
       let summaryContent = '';
+      let eventType = '';
       
       // Extract summary content if this is a summary note
       if (event.title.includes('::SUMMARY::')) {
         const parts = event.title.split('::SUMMARY::');
         summaryContent = parts[1] || '';
       }
+
+      // Determine event type from title or metadata
+      if (event.title.toLowerCase().includes('earnings')) {
+        eventType = 'Earnings Call/Report';
+      } else if (event.title.toLowerCase().includes('meeting')) {
+        eventType = 'Business Meeting';
+      } else if (event.title.toLowerCase().includes('research')) {
+        eventType = 'Research Session';
+      }
       
-      // Format the event information
+      // Format the event information with more business context
       return `
-Event: ${event.title.split('::SUMMARY::')[0]}
+Event Type: ${eventType || 'General Event'}
+Title: ${event.title.split('::SUMMARY::')[0]}
 Date: ${new Date(event.start).toLocaleDateString()}
-${notes ? `Notes: ${notes}` : ''}
-${summaryContent ? `Content: ${summaryContent}` : ''}
+${notes ? `Key Points:\n${notes}` : ''}
+${summaryContent ? `Detailed Summary:\n${summaryContent}` : ''}
       `.trim();
     }).join('\n\n');
 
-    // Prepare the prompt with events as context
+    // Prepare the prompt with events as context and business focus
     const fullPrompt = `
-You are a helpful writing assistant. Use the following calendar events as context:
+You are an expert business content writer and analyst. Your goal is to help create professional business content using the following calendar events as context. These events may include earnings calls, research sessions, meetings, and other business activities.
 
+CALENDAR EVENTS CONTEXT:
 ${eventsContext}
 
-User request: ${prompt}
+USER REQUEST: ${prompt}
 
-Please generate content based on the user's request and the provided calendar events.
+Please generate professional business content that:
+1. Maintains a formal, analytical tone
+2. Incorporates relevant data and insights from the events
+3. Follows standard business writing practices
+4. Includes clear sections and structure
+5. Highlights key findings and implications
+6. Provides actionable recommendations when appropriate
+
+Generate the content now:
 `;
 
     // Generate the content
@@ -113,9 +144,9 @@ export async function getChatResponse(
       `${msg.role.toUpperCase()}: ${msg.content}`
     ).join('\n\n');
 
-    // Prepare the prompt with document content and chat history
+    // Prepare the chat prompt with enhanced business focus
     const prompt = `
-You are a helpful writing assistant collaborating with the user on a document.
+You are an expert business content assistant with deep knowledge of company research, market analysis, and professional writing. You're collaborating with the user on a business document.
 
 CURRENT DOCUMENT CONTENT:
 ${documentContent}
@@ -125,7 +156,15 @@ ${formattedHistory}
 
 USER QUERY: ${newMessage}
 
-As the AI assistant, help the user with their writing and respond to their specific query. You can provide suggestions, insights, edits, research help, or any other assistance they need.
+As the AI assistant:
+1. Help improve the document's professional quality and analytical depth
+2. Suggest relevant business frameworks or analysis methods when appropriate
+3. Help identify gaps in the research or analysis
+4. Provide industry-standard formatting suggestions
+5. Offer data-driven insights and recommendations
+6. Maintain consistency with standard business writing practices
+
+Please provide your response with this business context in mind.
 `;
 
     // Generate the response
