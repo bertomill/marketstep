@@ -186,6 +186,15 @@ export function detectAnomalies(
   }
 }
 
+interface Trend {
+  metric: string;
+  trendType: 'increasing' | 'decreasing' | 'stable' | 'volatile';
+  strength: number;
+  recentValue: number;
+  percentChangeFromEarliest: number;
+  periods: string[];
+}
+
 /**
  * Identify trends in a company's financial metrics over time
  * 
@@ -224,7 +233,7 @@ export function identifyTrends(historicalMetrics: FinancialMetrics[]) {
     'freeCashFlow'
   ];
   
-  const trends: any[] = [];
+  const trends: Trend[] = [];
   
   // For each metric, analyze its trend
   for (const metric of metricsToAnalyze) {

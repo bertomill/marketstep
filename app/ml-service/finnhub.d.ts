@@ -1,58 +1,49 @@
+interface QuoteResponse {
+  c: number;  // Current price
+  h: number;  // High price of the day
+  l: number;  // Low price of the day
+  o: number;  // Open price of the day
+  pc: number; // Previous close price
+  t: number;  // Timestamp
+}
+
+interface SymbolSearchResult {
+  description: string;
+  displaySymbol: string;
+  symbol: string;
+  type: string;
+}
+
+interface SymbolSearchResponse {
+  count: number;
+  result: SymbolSearchResult[];
+}
+
+interface NewsArticle {
+  category: string;
+  datetime: number;
+  headline: string;
+  id: number;
+  image: string;
+  related: string;
+  source: string;
+  summary: string;
+  url: string;
+}
+
 declare module 'finnhub' {
-  export interface QuoteResponse {
-    c: number;  // Current price
-    h: number;  // High price of the day
-    l: number;  // Low price of the day
-    o: number;  // Open price of the day
-    pc: number; // Previous close price
-    t: number;  // Timestamp
-  }
-
-  export interface SymbolSearchResult {
-    count: number;
-    result: Array<{
-      description: string;
-      displaySymbol: string;
-      symbol: string;
-      type: string;
-    }>;
-  }
-
-  export interface ApiClient {
-    instance: {
-      authentications: {
-        'api_key': {
-          apiKey: string;
-        };
+  export class ApiClient {
+    static instance: ApiClient;
+    authentications: {
+      api_key: {
+        apiKey: string;
       };
     };
   }
 
-  export interface DefaultApi {
-    quote(
-      symbol: string, 
-      callback: (error: Error | null, data: QuoteResponse, response: any) => void
-    ): void;
-    
-    symbolSearch(
-      query: string, 
-      callback: (error: Error | null, data: SymbolSearchResult, response: any) => void
-    ): void;
-    
-    // Add other methods as needed
-  }
-
-  export const ApiClient: ApiClient;
   export class DefaultApi {
-    constructor();
-    quote(
-      symbol: string, 
-      callback: (error: Error | null, data: QuoteResponse, response: any) => void
-    ): void;
-    
-    symbolSearch(
-      query: string, 
-      callback: (error: Error | null, data: SymbolSearchResult, response: any) => void
-    ): void;
+    quote(symbol: string, callback: (error: Error | null, data: QuoteResponse) => void): void;
+    symbolSearch(query: string, callback: (error: Error | null, data: SymbolSearchResponse) => void): void;
+    companyNews(symbol: string, from: string, to: string, callback: (error: Error | null, data: NewsArticle[]) => void): void;
   }
 }

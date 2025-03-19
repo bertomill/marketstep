@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Sidebar } from '../components/Sidebar';
 import { useAuth } from '@/lib/auth';
 import { db } from '@/lib/firebase';
@@ -33,39 +33,35 @@ export default function NotesPage() {
   const [availableLabels, setAvailableLabels] = useState<string[]>([]);
   const [editingNote, setEditingNote] = useState<Note | null>(null);
   const [viewMode, setViewMode] = useState<ViewMode>('grid');
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-  // Load notes and extract unique labels when component mounts
-  useEffect(() => {
+  const loadNotes = useCallback(async () => {
     if (!user) return;
-    loadNotes();
-  }, [user]);
-
-  const loadNotes = async () => {
-    if (!user) return;
-
+    
     try {
-      const q = query(
-        collection(db, 'notes'),
-        where('userId', '==', user.uid),
-        orderBy('createdAt', 'desc')
-      );
-      
+      setIsLoading(true);
+      const notesRef = collection(db, 'users', user.uid, 'notes');
+      const q = query(notesRef, orderBy('createdAt', 'desc'));
       const querySnapshot = await getDocs(q);
-      const loadedNotes: Note[] = [];
-      const labels = new Set<string>();
       
-      querySnapshot.forEach((doc) => {
-        const note = { id: doc.id, ...doc.data() } as Note;
-        loadedNotes.push(note);
-        note.labels?.forEach(label => labels.add(label));
-      });
+      const loadedNotes = querySnapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      })) as Note[];
       
       setNotes(loadedNotes);
-      setAvailableLabels(Array.from(labels));
-    } catch (error) {
-      console.error('Error loading notes:', error);
+    } catch (err) {
+      console.error('Error loading notes:', err);
+      setError('Failed to load notes');
+    } finally {
+      setIsLoading(false);
     }
-  };
+  }, [user]);
+
+  useEffect(() => {
+    loadNotes();
+  }, [loadNotes]);
 
   const createOrUpdateNote = async () => {
     if (!user || !newNote.title || !newNote.content) return;
