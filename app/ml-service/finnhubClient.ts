@@ -6,6 +6,37 @@ import { ApiClient, DefaultApi } from 'finnhub';
 // This file handles all interactions with the Finnhub API for stock market data
 // It provides functions to get stock quotes, search symbols, and fetch company news
 
+interface QuoteResponse {
+  c: number;  // Current price
+  h: number;  // High price of the day
+  l: number;  // Low price of the day
+  o: number;  // Open price of the day
+  pc: number; // Previous close price
+  t: number;  // Timestamp
+}
+
+interface SymbolSearchResponse {
+  count: number;
+  result: Array<{
+    description: string;
+    displaySymbol: string;
+    symbol: string;
+    type: string;
+  }>;
+}
+
+interface NewsArticle {
+  category: string;
+  datetime: number;
+  headline: string;
+  id: number;
+  image: string;
+  related: string;
+  source: string;
+  summary: string;
+  url: string;
+}
+
 // Store the Finnhub client instance for reuse
 let finnhubClientInstance: DefaultApi | null = null;
 
@@ -38,7 +69,7 @@ export function getFinnhubClient(): DefaultApi {
  * @param symbol Stock ticker symbol (e.g. 'AAPL' for Apple)
  * @returns Promise with quote data including current price
  */
-export function getStockQuote(symbol: string): Promise<any> {
+export function getStockQuote(symbol: string): Promise<QuoteResponse> {
   return new Promise((resolve, reject) => {
     try {
       const client = getFinnhubClient();
@@ -48,7 +79,7 @@ export function getStockQuote(symbol: string): Promise<any> {
           console.error('Finnhub quote error:', error);
           reject(error);
         } else {
-          resolve(data);
+          resolve(data as QuoteResponse);
         }
       });
     } catch (error) {
@@ -64,7 +95,7 @@ export function getStockQuote(symbol: string): Promise<any> {
  * @param query Search query (company name or symbol)
  * @returns Promise with search results
  */
-export function searchSymbols(query: string): Promise<any> {
+export function searchSymbols(query: string): Promise<SymbolSearchResponse> {
   return new Promise((resolve, reject) => {
     try {
       const client = getFinnhubClient();
@@ -74,7 +105,7 @@ export function searchSymbols(query: string): Promise<any> {
           console.error('Finnhub symbol search error:', error);
           reject(error);
         } else {
-          resolve(data);
+          resolve(data as SymbolSearchResponse);
         }
       });
     } catch (error) {
@@ -106,7 +137,7 @@ export async function getStockPrice(symbol: string): Promise<number | null> {
  * @param symbol Stock ticker symbol
  * @returns Promise with array of news articles
  */
-export async function getCompanyNews(symbol: string): Promise<any[]> {
+export async function getCompanyNews(symbol: string): Promise<NewsArticle[]> {
   try {
     const client = getFinnhubClient();
     return new Promise((resolve, reject) => {
@@ -115,7 +146,7 @@ export async function getCompanyNews(symbol: string): Promise<any[]> {
           console.error('Error fetching company news:', error);
           reject(error);
         } else {
-          resolve(data || []);
+          resolve(data as NewsArticle[] || []);
         }
       });
     });

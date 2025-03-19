@@ -26,7 +26,7 @@ export function StockPredictionChart({ predictionResult, ticker }: StockPredicti
     try {
       const date = new Date(dateStr);
       return format(date, 'MMM d, yyyy');
-    } catch (e) {
+    } catch {
       return dateStr;
     }
   };
@@ -117,22 +117,22 @@ export function StockPredictionChart({ predictionResult, ticker }: StockPredicti
 
   return (
     <Card className="h-full">
-      <CardHeader>
-        <div className="flex justify-between items-center">
+      <CardHeader className="px-4 py-3 sm:px-6 sm:py-4">
+        <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-2">
           <div>
-            <CardTitle>{ticker.toUpperCase()} Stock Price Prediction</CardTitle>
-            <CardDescription>
+            <CardTitle className="text-base sm:text-lg">{ticker.toUpperCase()} Stock Price Prediction</CardTitle>
+            <CardDescription className="text-xs sm:text-sm">
               Historical and projected stock prices
             </CardDescription>
           </div>
           <div className="text-xs text-muted-foreground flex items-center gap-1">
             <InfoCircledIcon className="h-3 w-3" />
-            <span>Data Source: {dataSource === 'api' ? 'Alpha Vantage API' : 'Fallback Data (Demo)'}</span>
+            <span>Data: {dataSource === 'api' ? 'Alpha Vantage API' : 'Demo Data'}</span>
           </div>
         </div>
       </CardHeader>
-      <CardContent>
-        <div className="h-[300px]">
+      <CardContent className="px-2 sm:px-6">
+        <div className="h-[250px] sm:h-[300px]">
           <ParentSize>
             {({ width, height }) => (
               <XYChart 
@@ -148,8 +148,10 @@ export function StockPredictionChart({ predictionResult, ticker }: StockPredicti
                   tickFormat={(value) => {
                     // Only show some of the dates to avoid overcrowding
                     const date = new Date(value);
-                    return format(date, 'MM/dd');
+                    // On small screens, show fewer labels
+                    return width < 500 ? format(date, 'MM/dd') : format(date, 'MMM dd');
                   }}
+                  numTicks={width < 500 ? 5 : 10}
                 />
                 <AnimatedAxis 
                   orientation="left" 
@@ -158,6 +160,7 @@ export function StockPredictionChart({ predictionResult, ticker }: StockPredicti
                   tickFormat={(value) => {
                     return formatPrice(value).replace('$', '');
                   }}
+                  numTicks={width < 500 ? 4 : 5}
                 />
                 <Grid columns={false} numTicks={5} />
                 
@@ -184,8 +187,8 @@ export function StockPredictionChart({ predictionResult, ticker }: StockPredicti
                   strokeDasharray={predictedData[0]?.isProjection ? "4,4" : ""}
                 />
                 
-                {/* Annotation for prediction start */}
-                {predictionStartDate && (
+                {/* Annotation for prediction start - only show on larger screens */}
+                {predictionStartDate && width >= 500 && (
                   <Annotation
                     dataKey="Predicted"
                     datum={{ date: predictionStartDate, price: predictedData[predictionStartIndex]?.price || 0 }}
@@ -265,22 +268,22 @@ export function StockPredictionChart({ predictionResult, ticker }: StockPredicti
           </ParentSize>
         </div>
         
-        <div className="mt-4 grid grid-cols-3 gap-4 text-sm">
-          <div className="border rounded-md p-3">
+        <div className="mt-4 grid grid-cols-1 sm:grid-cols-3 gap-2 sm:gap-4 text-sm">
+          <div className="border rounded-md p-2 sm:p-3">
             <div className="text-muted-foreground text-xs mb-1">Trend</div>
             <div className={`font-medium ${getTrendColor()}`}>
               {trend === 'up' ? '↑ Upward' : trend === 'down' ? '↓ Downward' : '→ Sideways'}
             </div>
           </div>
           
-          <div className="border rounded-md p-3">
+          <div className="border rounded-md p-2 sm:p-3">
             <div className="text-muted-foreground text-xs mb-1">Confidence Level</div>
             <div className={`font-medium ${getConfidenceColor()}`}>
               {getConfidenceText()} ({(confidence * 100).toFixed(0)}%)
             </div>
           </div>
           
-          <div className="border rounded-md p-3">
+          <div className="border rounded-md p-2 sm:p-3">
             <div className="text-muted-foreground text-xs mb-1">Model Quality (R²)</div>
             <div className={`font-medium ${getR2ScoreColor()}`}>
               {getR2ScoreText()} ({r2.toFixed(2)})

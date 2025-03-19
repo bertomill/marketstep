@@ -9,11 +9,10 @@ import { FinancialAnomaly } from '@/app/ml-service/anomalyDetectionService'
 
 interface FinancialAnalysisProps {
   metrics: FinancialMetrics
-  previousMetrics?: FinancialMetrics
   anomalies: FinancialAnomaly[]
 }
 
-export function FinancialAnalysis({ metrics, previousMetrics, anomalies }: FinancialAnalysisProps) {
+export function FinancialAnalysis({ metrics, anomalies }: FinancialAnalysisProps) {
   const [activeTab, setActiveTab] = useState('metrics')
 
   return (

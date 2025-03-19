@@ -1,6 +1,5 @@
 'use client';
 
-import { useState } from "react"
 import { Button } from "@/components/ui/button"
 import { ScrollArea } from "@/components/ui/scroll-area"
 
@@ -10,8 +9,6 @@ interface FileContentProps {
 }
 
 export function FileContent({ content, onClose }: FileContentProps) {
-  const [isLoading, setIsLoading] = useState(false)
-
   return (
     <div className="flex flex-col h-full">
       <div className="flex justify-between items-center p-4 border-b">
